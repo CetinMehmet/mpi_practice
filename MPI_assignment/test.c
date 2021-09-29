@@ -62,6 +62,22 @@ void fill_ascending(int *A, int N) {
 	}
 }
 
+void sequential() {
+	int* arr = allocate_mem(N);
+	fill_random(arr, N);
+
+	clock_t begin = clock();
+
+	for (int i = 0; i < N; i++) {
+		int result = test(arr[i]);
+		printf("%d", result);
+	}
+
+	clock_t end = clock();
+	double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+	printf("Time spent for the sequential version: %f", time_spent);
+}
 int main(int argc, char *argv[]) {
+	sequential();
 	return 0;
 }
