@@ -99,7 +99,7 @@ void parallel_work(int proc_id, int job_per_proc) {
 		arr = allocate_mem(N);
 		fill_ascending(arr, N);
 		MPI_Send(arr, N, MPI_BYTE, 1, 0, MPI_COMM_WORLD);
-		printf("Process %d sent data %d to process 1\n", N);
+		printf("Process %d sent data %d to process 1\n", proc_id, N);
 		for (int i = proc_id * job_per_proc; i < job_per_proc + (job_per_proc * proc_id); i++) {
 			int result = test(arr[i]);
 			if (result) {
@@ -110,7 +110,7 @@ void parallel_work(int proc_id, int job_per_proc) {
 	else if (proc_id == 1) {
     	MPI_Recv(&arr, N, MPI_BYTE, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 		printf("Process %d received data %d from process 0\n", proc_id, N);
-		for (int i = proc_id * job_per_proc; i < job_per_proc + (job_per_proc * proc_id); i++) {
+		for (int i = 250; i < 300; i++) {
 			int result = test(arr[i]);
 			if (result) {
 				nr_true++;
@@ -134,6 +134,7 @@ int main(int argc, char *argv[]) {
 	clock_t begin = clock();
 
 	int job_per_proc = N / nr_procs;
+	printf("Number of processors: %d", nr_procs);
 	parallel_work(proc_id, job_per_proc);
 	
 	clock_t end = clock();
