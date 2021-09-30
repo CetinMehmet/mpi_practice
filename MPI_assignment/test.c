@@ -90,16 +90,17 @@ void sequential() {
 	- Make sure that the program keeps track of how many successful elements (number of trues) all processes have found together, 
 	so that all processes can terminate as fast as possible (When nr_trues >= 100). 
 */
-void parallel_work(int nr_procs, int proc_id, int job_per_proc) {
+void parallel_work(int proc_id, int job_per_proc) {
 	printf("Parallel program for processor %d has started!\n", proc_id);
 	int *arr;
+	int nr_true = 0;
+
 	if (proc_id == 0) { 			// Root processca
 		arr = allocate_mem(N);
 		fill_ascending(arr, N);
-		int nr_true = 0;
-
 		MPI_Send(arr, N, MPI_BYTE, 1, 0, MPI_COMM_WORLD);
-		for (int i = 0; i < job_per_proc; i++) {
+		printf("Process %d sent data %d to process 1\n", N);
+		for (int i = proc_id * job_per_proc; i < job_per_proc + (job_per_proc * proc_id); i++) {
 			int result = test(arr[i]);
 			if (result) {
 				nr_true++;
@@ -107,10 +108,9 @@ void parallel_work(int nr_procs, int proc_id, int job_per_proc) {
 		}
   	} 
 	else if (proc_id == 1) {
-		int nr_true = 0;
     	MPI_Recv(&arr, N, MPI_BYTE, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-		printf("Process 1 received data %d from process 0\n", N);
-		for (int i = job_per_proc; i < N; i++) {
+		printf("Process %d received data %d from process 0\n", proc_id, N);
+		for (int i = proc_id * job_per_proc; i < job_per_proc + (job_per_proc * proc_id); i++) {
 			int result = test(arr[i]);
 			if (result) {
 				nr_true++;
@@ -134,7 +134,7 @@ int main(int argc, char *argv[]) {
 	clock_t begin = clock();
 
 	int job_per_proc = N / nr_procs;
-	parallel_work(nr_procs, proc_id, job_per_proc);
+	parallel_work(proc_id, job_per_proc);
 	
 	clock_t end = clock();
   	double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
