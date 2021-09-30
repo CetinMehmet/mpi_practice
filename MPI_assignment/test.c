@@ -41,8 +41,8 @@ int test_imbalanced(int x) {
   return xd < -0.5;
 }
 
-int *allocate_mem(int N) {
-	int *A = calloc(N, sizeof(int));
+int *allocate_mem(int *A, int N) {
+	A = calloc(N, sizeof(int));
 	if (!A)
 		exit(0);
 	return A;
@@ -84,18 +84,15 @@ void sequential() {
 }
 
 
-int *init_random_arr() {
-	int arr[N]; 
-	arr = allocate_mem(N);
+void init_random_arr(int *arr) {
+	allocate_mem(arr, N);
 	fill_random(arr, N);
 	return arr;
 }
 
-int *init_ascending_arr() {
-	int arr[N]; 
-	arr = allocate_mem(N);
+void init_ascending_arr(int* arr) {
+	allocate_mem(arr, N);
 	fill_ascending(arr, N);
-	return arr;
 }
 /*
 	- To reduce the communication overhead, we will reserve (N / nr_procs) job per processor
@@ -105,7 +102,8 @@ int *init_ascending_arr() {
 void parallel_work(int nr_procs, int proc_id, int job_per_proc) {
 	printf("Parallel program for processor %d has started!\n", proc_id);
 	if (proc_id == 0) { 			// Root processca
-		int *arr = init_ascending_arr();
+		int *arr;
+		init_ascending_arr(arr);
 		int nr_true = 0;
 		fill_random(arr, N);
 
@@ -129,8 +127,6 @@ void parallel_work(int nr_procs, int proc_id, int job_per_proc) {
 			}
 		}
   	} 	
-	
-  	printf("Number of trues for N=%d, R=%d: %d\n", N, R, nr_true);
 }
 
 void initialize_mpi(int *nr_procs, int *proc_id, int *name_len, char **proc_names) {
