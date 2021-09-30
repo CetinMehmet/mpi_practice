@@ -85,13 +85,15 @@ void sequential() {
 
 
 int *init_random_arr() {
-	int *arr = allocate_mem(N);
+	int arr[N]; 
+	arr = allocate_mem(N);
 	fill_random(arr, N);
 	return arr;
 }
 
 int *init_ascending_arr() {
-	int *arr = allocate_mem(N);
+	int arr[N]; 
+	arr = allocate_mem(N);
 	fill_ascending(arr, N);
 	return arr;
 }
@@ -132,12 +134,13 @@ void parallel_work(int nr_procs, int proc_id, int job_per_proc) {
 }
 
 void initialize_mpi(int *nr_procs, int *proc_id, int *name_len, char **proc_names) {
-	MPI_Init(&argc, &argv); 						// Initialize MPI env
 	MPI_Comm_size(MPI_COMM_WORLD, &nr_procs); 		// Get number of processors we are gonna use for the job
     MPI_Comm_rank(MPI_COMM_WORLD, &proc_id); 		// Get rank (id) of processors
 	MPI_Get_processor_name(proc_names, &name_len); 	// Get current processor name
 }
 int main(int argc, char *argv[]) {
+	// Initialize MPI env
+	MPI_Init(&argc, &argv); 						
 	int nr_procs = 0;
 	int proc_id = -1;
 	int name_len = 0; 
