@@ -100,7 +100,7 @@ int *init_ascending_arr() {
 	- Make sure that the program keeps track of how many successful elements (number of trues) all processes have found together, 
 	so that all processes can terminate as fast as possible (When nr_trues >= 100). 
 */
-void parallel_work(int nr_procs, int proc_id, int jobs_per_proc) {
+void parallel_work(int nr_procs, int proc_id, int job_per_proc) {
 	printf("Parallel program for processor %d has started!\n", proc_id);
 	if (proc_id == 0) { 			// Root processca
 		int *arr = init_ascending_arr();
@@ -117,8 +117,9 @@ void parallel_work(int nr_procs, int proc_id, int jobs_per_proc) {
   	} 
 	else if (proc_id == 1) {
 		int nr_true = 0;
+		int *arr;
     	MPI_Recv(&arr, N, MPI_BYTE, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-		printf("Process 1 received data %d from process 0\n", number);
+		printf("Process 1 received data %d from process 0\n", N);
 		for (int i = job_per_proc; i < N; i++) {
 			int result = test(arr[i]);
 			if (result) {
@@ -130,7 +131,7 @@ void parallel_work(int nr_procs, int proc_id, int jobs_per_proc) {
   	printf("Number of trues for N=%d, R=%d: %d\n", N, R, nr_true);
 }
 
-void initialize_mpi(int &nr_procs, int &proc_id, int &name_len, char *proc_names) {
+void initialize_mpi(int *nr_procs, int *proc_id, int *name_len, char **proc_names) {
 	MPI_Init(&argc, &argv); 						// Initialize MPI env
 	MPI_Comm_size(MPI_COMM_WORLD, &nr_procs); 		// Get number of processors we are gonna use for the job
     MPI_Comm_rank(MPI_COMM_WORLD, &proc_id); 		// Get rank (id) of processors
@@ -141,7 +142,7 @@ int main(int argc, char *argv[]) {
 	int proc_id = -1;
 	int name_len = 0; 
 	char proc_names[MPI_MAX_PROCESSOR_NAME];
-	initialize_mpi(nr_procs, proc_id, name_len, proc_names);
+	initialize_mpi(&nr_procs, &proc_id, &name_len, &proc_names);
 
 	clock_t begin = clock();
 
