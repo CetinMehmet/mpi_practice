@@ -41,8 +41,8 @@ int test_imbalanced(int x) {
   return xd < -0.5;
 }
 
-int *allocate_mem(int *A, int N) {
-	A = calloc(N, sizeof(int));
+int *allocate_mem(int N) {
+	int *A = calloc(N, sizeof(int));
 	if (!A)
 		exit(0);
 	return A;
@@ -63,8 +63,8 @@ void fill_ascending(int *A, int N) {
 }
 
 void sequential() {
-	int *arr;
-	init_random_arr(arr);
+	int *arr = allocate_mem(N);
+	fill_random(arr, N);
 	int nr_true = 0;
 	
 	printf("Sequential program has started!\n");
@@ -85,15 +85,6 @@ void sequential() {
 }
 
 
-void init_random_arr(int *arr) {
-	allocate_mem(arr, N);
-	fill_random(arr, N);
-}
-
-void init_ascending_arr(int* arr) {
-	allocate_mem(arr, N);
-	fill_ascending(arr, N);
-}
 /*
 	- To reduce the communication overhead, we will reserve (N / nr_procs) job per processor
 	- Make sure that the program keeps track of how many successful elements (number of trues) all processes have found together, 
@@ -101,11 +92,11 @@ void init_ascending_arr(int* arr) {
 */
 void parallel_work(int nr_procs, int proc_id, int job_per_proc) {
 	printf("Parallel program for processor %d has started!\n", proc_id);
+	int *arr;
 	if (proc_id == 0) { 			// Root processca
-		int *arr;
-		init_ascending_arr(arr);
+		arr = allocate_mem(N);
+		fill_ascending(arr, N);
 		int nr_true = 0;
-		fill_random(arr, N);
 
 		MPI_Send(arr, N, MPI_BYTE, 1, 0, MPI_COMM_WORLD);
 		for (int i = 0; i < job_per_proc; i++) {
@@ -117,7 +108,6 @@ void parallel_work(int nr_procs, int proc_id, int job_per_proc) {
   	} 
 	else if (proc_id == 1) {
 		int nr_true = 0;
-		int *arr;
     	MPI_Recv(&arr, N, MPI_BYTE, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 		printf("Process 1 received data %d from process 0\n", N);
 		for (int i = job_per_proc; i < N; i++) {
@@ -140,7 +130,7 @@ int main(int argc, char *argv[]) {
 	MPI_Comm_size(MPI_COMM_WORLD, &nr_procs); 		// Get number of processors we are gonna use for the job
     MPI_Comm_rank(MPI_COMM_WORLD, &proc_id); 		// Get rank (id) of processors
 	MPI_Get_processor_name(proc_names, &name_len); 	// Get current processor name
-	
+
 	clock_t begin = clock();
 
 	int job_per_proc = N / nr_procs;
