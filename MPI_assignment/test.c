@@ -5,6 +5,8 @@
 #include <math.h>
 #include "mpi.h"
 
+#define ROOT 1
+
 int N = 500;
 int R = 100;
 
@@ -84,33 +86,37 @@ void sequential() {
   	printf("Number of trues for N=%d, R=%d: %d\n", N, R, nr_true);
 }
 
+void get_subset(int *arr, int* sub_arr, int startPoint, int jobs_per_proc) {
+	for(i = startPoint, j = 0; i < (startPoint + jobs_per_proc), j < jobs_per_proc; i++, j++)
+   		sub_arr[j] = arr[i];
+}
 
 /*
 	- To reduce the communication overhead, we will reserve (N / nr_procs) job per processor
 	- Make sure that the program keeps track of how many successful elements (number of trues) all processes have found together, 
 	so that all processes can terminate as fast as possible (When nr_trues >= 100). 
 */
-void parallel_work(int proc_id, int job_per_proc) {
+void parallel_work(int nr_procs, int proc_id, int job_per_proc) {
 	printf("Parallel program for processor %d has started!\n", proc_id);
-	int *arr;
 	int nr_true = 0;
 
-	if (proc_id == 0) { 			// Root processca
-		arr = allocate_mem(N);
+	if (proc_id == ROOT) { 			// Root machine: only distributes work
+		int *arr = allocate_mem(N);
+		int* sub_arr = allocate_mem(job_per_proc);
 		fill_ascending(arr, N);
-		MPI_Send(arr, N, MPI_INT, 1, 0, MPI_COMM_WORLD);
-		printf("Process %d sent data %d to process 1\n", proc_id, N);
-		for (int i = proc_id * job_per_proc; i < job_per_proc + (job_per_proc * proc_id); i++) {
-			int result = test(arr[i]);
-			if (result) {
-				nr_true++;
-			}
+		for (int id = 1; i < nr_procs; i++) {
+			get_subset(arr, sub_arr, (id-1) * job_per_proc, job_per_proc);
+			MPI_Send(sub_arr, job_per_proc, MPI_INT, id, 0, MPI_COMM_WORLD);
+			printf("Process 0 sent data %d to process 1\n", i, N);
 		}
+		
+		// TODO: gather all nr_trues and check if more than 100
   	} 
-	else if (proc_id == 1) {
-    	MPI_Recv(arr, N, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+	else {
+		sub_arr = allocate_mem(job_per_proc); // allocate sufficient size to buffer 
+    	MPI_Recv(sub_arr, job_per_proc, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE); // Every worker recieves work from root machine
 		printf("Process %d received data %d from process 0\n", proc_id, N);
-		for (int i = proc_id * job_per_proc; i < job_per_proc + (job_per_proc * proc_id); i++) {
+		for (int i = 0; i < job_per_proc; i++) {
 			int result = test(arr[i]);
 			if (result) {
 				nr_true++;
@@ -133,9 +139,9 @@ int main(int argc, char *argv[]) {
 
 	clock_t begin = clock();
 
-	int job_per_proc = N / nr_procs;
+	int job_per_proc = (N / (nr_procs - 1));
 
-	parallel_work(proc_id, job_per_proc);
+	parallel_work(nr_procs, proc_id, job_per_proc);
 	
 	clock_t end = clock();
   	double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
