@@ -63,7 +63,8 @@ void fill_ascending(int *A, int N) {
 }
 
 void sequential() {
-	int *arr = init_random_arr();
+	int *arr;
+	init_random_arr(arr);
 	int nr_true = 0;
 	
 	printf("Sequential program has started!\n");
@@ -87,7 +88,6 @@ void sequential() {
 void init_random_arr(int *arr) {
 	allocate_mem(arr, N);
 	fill_random(arr, N);
-	return arr;
 }
 
 void init_ascending_arr(int* arr) {
@@ -129,7 +129,7 @@ void parallel_work(int nr_procs, int proc_id, int job_per_proc) {
   	} 	
 }
 
-void initialize_mpi(int *nr_procs, int *proc_id, int *name_len, char **proc_names) {
+void initialize_mpi(int nr_procs, int proc_id, int name_len, char *proc_names) {
 	MPI_Comm_size(MPI_COMM_WORLD, &nr_procs); 		// Get number of processors we are gonna use for the job
     MPI_Comm_rank(MPI_COMM_WORLD, &proc_id); 		// Get rank (id) of processors
 	MPI_Get_processor_name(proc_names, &name_len); 	// Get current processor name
