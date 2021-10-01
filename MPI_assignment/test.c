@@ -115,7 +115,7 @@ int has_suff_trues(int *total_nr_trues) {
 	return 0;
 }
 
-void do_job(int job_per_proc, int *sub_arr) {
+void do_job(int job_per_proc, int *sub_arr, int nr_procs) {
 	int nr_true = 0;
 	for (int i = 0; i < job_per_proc; i++) {
 		int result = test(sub_arr[i]);
@@ -176,7 +176,7 @@ void parallel_work(int nr_procs, int proc_id, int job_per_proc) {
 		MPI_Probe(ROOT, TAG_ARR_DATA, MPI_COMM_WORLD, &status); // Wait for pending messages
     	MPI_Recv(sub_arr, job_per_proc, MPI_INT, ROOT, TAG_ARR_DATA, MPI_COMM_WORLD, &status); // Every worker recieves work from root machine
 		printf("Process %d received data %d from process 0\n", proc_id, job_per_proc);
-		do_job(job_per_proc, sub_arr);
+		do_job(job_per_proc, sub_arr, nr_procs);
   	} 	
 }
 
