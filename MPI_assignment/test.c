@@ -131,7 +131,7 @@ void do_job(int job_per_proc, int *sub_arr, int nr_procs) {
 	- To reduce the communication overhead, we will reserve (N / nr_procs) job per processor
 	- Make sure that the program keeps track of how many successful elements (number of trues) all processes have found together, 
 	so that all processes can terminate as fast as possible (When nr_trues >= 100). 
-	- Root machine uses synchronous and blocking send because we want the recv machine to be ready, as the Root process might start early and send the message, where the reciever might be not ready.
+	- Root machine uses async non-blocking send 
 */
 
 // TODO: Use scatter and gather
@@ -146,7 +146,7 @@ void parallel_work(int nr_procs, int proc_id, int job_per_proc) {
 		for (int id = 1; id < nr_procs; id++) {
 			int *sub_arr = allocate_mem(job_per_proc);
 			get_subset(arr, sub_arr, (id-1) * job_per_proc, job_per_proc);
-			MPI_Ssend(sub_arr, job_per_proc, MPI_INT, id, TAG_ARR_DATA, MPI_COMM_WORLD); 
+			MPI_Isend(sub_arr, job_per_proc, MPI_INT, id, TAG_ARR_DATA, MPI_COMM_WORLD); 
 			printf("Process 0 sent data %d to process %d\n", job_per_proc, id);
 		}
 		
