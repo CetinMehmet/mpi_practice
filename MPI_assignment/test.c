@@ -139,14 +139,14 @@ void do_job(int job_per_proc, int *sub_arr, int nr_procs) {
 void parallel_work(int nr_procs, int proc_id, int job_per_proc) {
 	printf("Parallel program for processor %d has started!\n", proc_id);
 	int nr_true = 0;
-
+	MPI_Request request; // request to send a message to reciever
 	if (proc_id == ROOT) { 			// Root machine: only distributes work
 		int *arr = allocate_mem(N);
 		fill_ascending(arr, N);
 		for (int id = 1; id < nr_procs; id++) {
 			int *sub_arr = allocate_mem(job_per_proc);
 			get_subset(arr, sub_arr, (id-1) * job_per_proc, job_per_proc);
-			MPI_Isend(sub_arr, job_per_proc, MPI_INT, id, TAG_ARR_DATA, MPI_COMM_WORLD); 
+			MPI_Isend(sub_arr, job_per_proc, MPI_INT, id, TAG_ARR_DATA, MPI_COMM_WORLD, &request); 
 			printf("Process 0 sent data %d to process %d\n", job_per_proc, id);
 		}
 		
@@ -174,7 +174,8 @@ void parallel_work(int nr_procs, int proc_id, int job_per_proc) {
 		int *sub_arr = allocate_mem(job_per_proc); // allocate sufficient size to buffer 
 		MPI_Status status;
 		MPI_Probe(ROOT, TAG_ARR_DATA, MPI_COMM_WORLD, &status); // Wait for pending messages
-    	MPI_Recv(sub_arr, job_per_proc, MPI_INT, ROOT, TAG_ARR_DATA, MPI_COMM_WORLD, &status); // Every worker recieves work from root machine
+    	MPI_Irecv(sub_arr, job_per_proc, MPI_INT, ROOT, TAG_ARR_DATA, MPI_COMM_WORLD, &request); // Every worker recieves work from root machine
+  		MPI_Wait(&request, &status); // Wait for message to arrive
 		printf("Process %d received data %d from process 0\n", proc_id, job_per_proc);
 		do_job(job_per_proc, sub_arr, nr_procs);
   	} 	
