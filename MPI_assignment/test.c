@@ -158,8 +158,10 @@ void parallel_work(int nr_procs, int proc_id, int job_per_proc) {
   	} 
 	else {
 		int *sub_arr = allocate_mem(job_per_proc); // allocate sufficient size to buffer 
-    	MPI_Recv(sub_arr, job_per_proc, MPI_INT, ROOT, TAG_ARR_DATA, MPI_COMM_WORLD, MPI_STATUS_IGNORE); // Every worker recieves work from root machine
-		printf("Process %d received data %d from process 0\n", proc_id, N);
+		MPI_Status status;
+		MPI_Probe(ROOT, TAG_ARR_DATA, MPI_COMM_WORLD, &status); // Wait for pending messages
+    	MPI_Recv(sub_arr, job_per_proc, MPI_INT, ROOT, TAG_ARR_DATA, MPI_COMM_WORLD, &status); // Every worker recieves work from root machine
+		printf("Process %d received data %d from process 0\n", proc_id, job_per_proc);
 		for (int i = 0; i < job_per_proc; i++) {
 			int result = test(sub_arr[i]);
 			if (result) {
