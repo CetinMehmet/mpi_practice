@@ -90,16 +90,23 @@ void sequential() {
 
 void get_subset(int *arr, int* sub_arr, int startPoint, int jobs_per_proc) {
 	int j = 0;
-	for(int i = startPoint, i < (startPoint + jobs_per_proc); i++) {
+	for(int i = startPoint; i < (startPoint + jobs_per_proc); i++) {
 		sub_arr[j] = arr[i];
 		j++;
+	}
+}
+
+void fill_zeros(int *arr) {
+	int n = sizeof(arr) / sizeof(int);
+	for (int i = 0; i < n; i++) {
+		arr[i] = 0;
 	}
 }
 
 int has_suff_trues(int *total_nr_trues) {
 	int n = sizeof(total_nr_trues) / sizeof(int);
 	int sum = 0;
-	for (int i; i < n; i++) {
+	for (int i = 0; i < n; i++) {
 		sum += total_nr_trues[i];
 	} 
 	if (sum >= 100) {
@@ -121,7 +128,6 @@ void parallel_work(int nr_procs, int proc_id, int job_per_proc) {
 
 	if (proc_id == ROOT) { 			// Root machine: only distributes work
 		int *arr = allocate_mem(N);
-		int *total_nr_trues = allocate_mem(nr_procs-1); // Have a slot in the array for each computing process
 		fill_ascending(arr, N);
 		for (int id = 1; id < nr_procs; id++) {
 			int *sub_arr = allocate_mem(job_per_proc);
@@ -130,6 +136,8 @@ void parallel_work(int nr_procs, int proc_id, int job_per_proc) {
 			printf("Process 0 sent data %d to process %d\n", job_per_proc, id);
 		}
 		
+		int *total_nr_trues = allocate_mem(nr_procs-1); // Have a slot in the array for each computing process
+		fill_zeros(total_nr_trues);
 		while (!has_suff_trues(total_nr_trues)) {
 			int flag = 0;
 			MPI_Status status;
