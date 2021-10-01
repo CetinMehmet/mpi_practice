@@ -6,6 +6,8 @@
 #include "mpi.h"
 
 #define ROOT 1
+#define TAG_ARR_DATA 0
+#define TAG_NR_TRUES 1
 
 int N = 500;
 int R = 100;
@@ -91,35 +93,67 @@ void get_subset(int *arr, int* sub_arr, int startPoint, int jobs_per_proc) {
    		sub_arr[j] = arr[i];
 }
 
+int has_suff_trues(total_nr_trues) {
+	int sum = 0;
+	for (int i; i < total_nr_trues; i++) {
+		sum += total_nr_trues[i];
+	} 
+	if (sum >= 100) {
+		return 1;
+	}
+}
 /*
 	- To reduce the communication overhead, we will reserve (N / nr_procs) job per processor
 	- Make sure that the program keeps track of how many successful elements (number of trues) all processes have found together, 
 	so that all processes can terminate as fast as possible (When nr_trues >= 100). 
 */
+
+// TODO: Use scatter and gather
+// Update nr_trues per 50 iteration
 void parallel_work(int nr_procs, int proc_id, int job_per_proc) {
 	printf("Parallel program for processor %d has started!\n", proc_id);
 	int nr_true = 0;
 
 	if (proc_id == ROOT) { 			// Root machine: only distributes work
 		int *arr = allocate_mem(N);
-		int* sub_arr = allocate_mem(job_per_proc);
+		int *sub_arr = allocate_mem(job_per_proc);
+		int *total_nr_trues = int *allocate_mem(nr_procs-1); // Have a slot in the array for each computing process
 		fill_ascending(arr, N);
 		for (int id = 1; i < nr_procs; i++) {
 			get_subset(arr, sub_arr, (id-1) * job_per_proc, job_per_proc);
-			MPI_Send(sub_arr, job_per_proc, MPI_INT, id, 0, MPI_COMM_WORLD);
+			MPI_Send(sub_arr, job_per_proc, MPI_INT, id, TAG_ARR_DATA, MPI_COMM_WORLD);
 			printf("Process 0 sent data %d to process 1\n", i, N);
 		}
 		
-		// TODO: gather all nr_trues and check if more than 100
+		while (!has_suff_trues(total_nr_trues)) {
+			int flag = 0;
+			MPI_Status status;
+			MPI_Iprobe(MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD, &flag, &status); // Implicit recieve
+			while (flag) {
+				// Handle the nr_trues
+				source = status.MPI_SOURCE;
+				MPI_Recv(&nr_true, 1, MPI_INT, source, TAG_NR_TRUES, MPI_COMM_WORLD, &status);
+				total_nr_trues[source-1] = nr_true; // Update the nr_trues coming from process 'source'
+				MPI_Iprobe(MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD, &flag, &status); // check for more updates
+			}
+		}
+
+
+		printf("MPI aborting process %d", proc_id);
+		MPI_Abort(MPI_COMM_WORLD, ROOT); // Abort MPI if we have enough amount of trues, which is 100 for test1
+
   	} 
 	else {
 		sub_arr = allocate_mem(job_per_proc); // allocate sufficient size to buffer 
-    	MPI_Recv(sub_arr, job_per_proc, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE); // Every worker recieves work from root machine
+    	MPI_Recv(sub_arr, job_per_proc, MPI_INT, ROOT, TAG_ARR_DATA, MPI_COMM_WORLD, MPI_STATUS_IGNORE); // Every worker recieves work from root machine
 		printf("Process %d received data %d from process 0\n", proc_id, N);
 		for (int i = 0; i < job_per_proc; i++) {
-			int result = test(arr[i]);
+			int result = test(sub_arr[i]);
 			if (result) {
 				nr_true++;
+			}
+			if (nr_true % (R / nr_procs) == 0) { // If nr_true is equal to 50 (R:100 / nr_procs:2)
+				MPI_Send(nr_true, 1, MPI_INT, ROOT, 1, MPI_COMM_WORLD); // Send nr_true, where tag is 1, to root process so it can be updated. 
 			}
 		}
   	} 	
