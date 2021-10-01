@@ -114,10 +114,24 @@ int has_suff_trues(int *total_nr_trues) {
 	}
 	return 0;
 }
+
+void do_job(int job_per_proc, int *sub_arr) {
+	int nr_true = 0;
+	for (int i = 0; i < job_per_proc; i++) {
+		int result = test(sub_arr[i]);
+		if (result) {
+			nr_true++;
+		}
+		if (nr_true % (R / nr_procs) == 0) { // If nr_true is equal to 50 (R:100 / nr_procs:2)
+			MPI_Send(&nr_true, 1, MPI_INT, ROOT, 1, MPI_COMM_WORLD); // Send nr_true, where tag is 1, to root process so it can be updated. 
+		}
+	}
+}
 /*
 	- To reduce the communication overhead, we will reserve (N / nr_procs) job per processor
 	- Make sure that the program keeps track of how many successful elements (number of trues) all processes have found together, 
 	so that all processes can terminate as fast as possible (When nr_trues >= 100). 
+	- Root machine uses synchronous and blocking send because we want the recv machine to be ready, as the Root process might start early and send the message, where the reciever might be not ready.
 */
 
 // TODO: Use scatter and gather
@@ -132,7 +146,7 @@ void parallel_work(int nr_procs, int proc_id, int job_per_proc) {
 		for (int id = 1; id < nr_procs; id++) {
 			int *sub_arr = allocate_mem(job_per_proc);
 			get_subset(arr, sub_arr, (id-1) * job_per_proc, job_per_proc);
-			MPI_Send(sub_arr, job_per_proc, MPI_INT, id, TAG_ARR_DATA, MPI_COMM_WORLD);
+			MPI_Ssend(sub_arr, job_per_proc, MPI_INT, id, TAG_ARR_DATA, MPI_COMM_WORLD); 
 			printf("Process 0 sent data %d to process %d\n", job_per_proc, id);
 		}
 		
@@ -162,15 +176,7 @@ void parallel_work(int nr_procs, int proc_id, int job_per_proc) {
 		MPI_Probe(ROOT, TAG_ARR_DATA, MPI_COMM_WORLD, &status); // Wait for pending messages
     	MPI_Recv(sub_arr, job_per_proc, MPI_INT, ROOT, TAG_ARR_DATA, MPI_COMM_WORLD, &status); // Every worker recieves work from root machine
 		printf("Process %d received data %d from process 0\n", proc_id, job_per_proc);
-		for (int i = 0; i < job_per_proc; i++) {
-			int result = test(sub_arr[i]);
-			if (result) {
-				nr_true++;
-			}
-			if (nr_true % (R / nr_procs) == 0) { // If nr_true is equal to 50 (R:100 / nr_procs:2)
-				MPI_Send(&nr_true, 1, MPI_INT, ROOT, 1, MPI_COMM_WORLD); // Send nr_true, where tag is 1, to root process so it can be updated. 
-			}
-		}
+		do_job(job_per_proc, sub_arr);
   	} 	
 }
 
