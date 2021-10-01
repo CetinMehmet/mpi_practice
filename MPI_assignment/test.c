@@ -89,11 +89,14 @@ void sequential() {
 }
 
 void get_subset(int *arr, int* sub_arr, int startPoint, int jobs_per_proc) {
-	for(i = startPoint, j = 0; i < (startPoint + jobs_per_proc), j < jobs_per_proc; i++, j++)
-   		sub_arr[j] = arr[i];
+	for(int i = startPoint, int j = 0; 
+		i < (startPoint + jobs_per_proc), j < jobs_per_proc; 
+		i++, j++) {
+			sub_arr[j] = arr[i];
+		}
 }
 
-int has_suff_trues(total_nr_trues) {
+int has_suff_trues(int *total_nr_trues) {
 	int sum = 0;
 	for (int i; i < total_nr_trues; i++) {
 		sum += total_nr_trues[i];
@@ -101,6 +104,7 @@ int has_suff_trues(total_nr_trues) {
 	if (sum >= 100) {
 		return 1;
 	}
+	return 0;
 }
 /*
 	- To reduce the communication overhead, we will reserve (N / nr_procs) job per processor
@@ -116,10 +120,10 @@ void parallel_work(int nr_procs, int proc_id, int job_per_proc) {
 
 	if (proc_id == ROOT) { 			// Root machine: only distributes work
 		int *arr = allocate_mem(N);
-		int *sub_arr = allocate_mem(job_per_proc);
-		int *total_nr_trues = int *allocate_mem(nr_procs-1); // Have a slot in the array for each computing process
+		int *total_nr_trues = allocate_mem(nr_procs-1); // Have a slot in the array for each computing process
 		fill_ascending(arr, N);
-		for (int id = 1; i < nr_procs; i++) {
+		for (int id = 1; id < nr_procs; i++) {
+			int *sub_arr = allocate_mem(job_per_proc);
 			get_subset(arr, sub_arr, (id-1) * job_per_proc, job_per_proc);
 			MPI_Send(sub_arr, job_per_proc, MPI_INT, id, TAG_ARR_DATA, MPI_COMM_WORLD);
 			printf("Process 0 sent data %d to process 1\n", i, N);
@@ -131,7 +135,7 @@ void parallel_work(int nr_procs, int proc_id, int job_per_proc) {
 			MPI_Iprobe(MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD, &flag, &status); // Implicit recieve
 			while (flag) {
 				// Handle the nr_trues
-				source = status.MPI_SOURCE;
+				int source = status.MPI_SOURCE;
 				MPI_Recv(&nr_true, 1, MPI_INT, source, TAG_NR_TRUES, MPI_COMM_WORLD, &status);
 				total_nr_trues[source-1] = nr_true; // Update the nr_trues coming from process 'source'
 				MPI_Iprobe(MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD, &flag, &status); // check for more updates
@@ -153,7 +157,7 @@ void parallel_work(int nr_procs, int proc_id, int job_per_proc) {
 				nr_true++;
 			}
 			if (nr_true % (R / nr_procs) == 0) { // If nr_true is equal to 50 (R:100 / nr_procs:2)
-				MPI_Send(nr_true, 1, MPI_INT, ROOT, 1, MPI_COMM_WORLD); // Send nr_true, where tag is 1, to root process so it can be updated. 
+				MPI_Send(&nr_true, 1, MPI_INT, ROOT, 1, MPI_COMM_WORLD); // Send nr_true, where tag is 1, to root process so it can be updated. 
 			}
 		}
   	} 	
