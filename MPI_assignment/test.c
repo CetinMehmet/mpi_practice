@@ -123,7 +123,7 @@ void do_job(int job_per_proc, int *sub_arr, int nr_procs) {
 			nr_true++;
 		}
 		if (nr_true % (R / nr_procs) == 0) { // If nr_true is equal to 50 (R:100 / nr_procs:2)
-			MPI_Send(&nr_true, 1, MPI_INT, ROOT, 1, MPI_COMM_WORLD); // Send nr_true, where tag is 1, to root process so it can be updated. 
+			MPI_Send(&nr_true, 1, MPI_INT, ROOT, TAG_NR_TRUES, MPI_COMM_WORLD); // Send nr_true, where tag is 1, to root process so it can be updated. 
 		}
 	}
 }
@@ -136,13 +136,11 @@ void do_job(int job_per_proc, int *sub_arr, int nr_procs) {
 
 // TODO: Use scatter and gather
 // Update nr_trues per 50 iteration
-void parallel_work(int nr_procs, int proc_id, int job_per_proc) {
+void parallel_work(int nr_procs, int proc_id, int job_per_proc, int *arr) {
 	printf("Parallel program for processor %d has started!\n", proc_id);
 	int nr_true = 0;
 	MPI_Request request; // request to send a message to reciever
 	if (proc_id == ROOT) { 			// Root machine: only distributes work
-		int *arr = allocate_mem(N);
-		fill_ascending(arr, N);
 		for (int id = 1; id < nr_procs; id++) {
 			int *sub_arr = allocate_mem(job_per_proc);
 			get_subset(arr, sub_arr, (id-1) * job_per_proc, job_per_proc);
@@ -152,6 +150,7 @@ void parallel_work(int nr_procs, int proc_id, int job_per_proc) {
 		
 		int *total_nr_trues = allocate_mem(nr_procs-1); // Have a slot in the array for each computing process
 		fill_zeros(total_nr_trues);
+		printf("Checking if we have sufficient amount of trues.");
 		while (!has_suff_trues(total_nr_trues)) {
 			int flag = 0;
 			MPI_Status status;
@@ -165,9 +164,8 @@ void parallel_work(int nr_procs, int proc_id, int job_per_proc) {
 			}
 		}
 
-
-		printf("MPI aborting process %d", proc_id);
-		MPI_Abort(MPI_COMM_WORLD, ROOT); // Abort MPI if we have enough amount of trues, which is 100 for test1
+		printf("MPI aborting process %d\n", proc_id);
+		// MPI_Abort(MPI_COMM_WORLD, ROOT); // Abort MPI if we have enough amount of trues, which is 100 for test1
 
   	} 
 	else {
@@ -178,6 +176,7 @@ void parallel_work(int nr_procs, int proc_id, int job_per_proc) {
   		MPI_Wait(&request, &status); // Wait for message to arrive
 		printf("Process %d received data %d from process 0\n", proc_id, job_per_proc);
 		do_job(job_per_proc, sub_arr, nr_procs);
+		printf("Procces %d finished the job", proc_id);
   	} 	
 }
 
@@ -196,8 +195,9 @@ int main(int argc, char *argv[]) {
 	clock_t begin = clock();
 
 	int job_per_proc = (N / (nr_procs - 1));
-
-	parallel_work(nr_procs, proc_id, job_per_proc);
+	int *arr = allocate_mem(N);
+	fill_ascending(arr, N); // ascending work
+	parallel_work(nr_procs, proc_id, job_per_proc, arr);
 	
 	clock_t end = clock();
   	double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
