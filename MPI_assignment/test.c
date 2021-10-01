@@ -171,22 +171,9 @@ void parallel_work(int nr_procs, int proc_id, int job_per_proc, int *arr) {
 	else {
 		int *sub_arr = allocate_mem(job_per_proc); // allocate sufficient size to buffer 
 		MPI_Status status;
-		int recieved_work = 0;
-		while (!recieved_work) {
-			int flag = 0;
-			MPI_Status status;
-			MPI_Iprobe(MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD, &flag, &status); // Implicit recieve
-			while (flag) {
-				// Handle the nr_trues
-				int source = status.MPI_SOURCE;
-				MPI_Irecv(sub_arr, job_per_proc, MPI_INT, ROOT, TAG_ARR_DATA, MPI_COMM_WORLD, &request); // Every worker recieves work from root machine
-  				MPI_Wait(&request, &status); // Wait for message to arrive
-				recieved_work = 1;
-				MPI_Iprobe(MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD, &flag, &status); // check for more updates
-			}
-		}
-		// MPI_Probe(ROOT, TAG_ARR_DATA, MPI_COMM_WORLD, &status); // Wait for pending messages
-    	
+		MPI_Probe(ROOT, TAG_ARR_DATA, MPI_COMM_WORLD, &status); // Wait for pending messages
+    	MPI_Irecv(sub_arr, job_per_proc, MPI_INT, ROOT, TAG_ARR_DATA, MPI_COMM_WORLD, &request); // Every worker recieves work from root machine
+  		MPI_Wait(&request, &status); // Wait for message to arrive
 		printf("Process %d received data %d from process 0\n", proc_id, job_per_proc);
 		do_job(job_per_proc, sub_arr, nr_procs);
 		printf("Procces %d finished the job\n", proc_id);
