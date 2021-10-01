@@ -89,15 +89,15 @@ void sequential() {
 }
 
 void get_subset(int *arr, int* sub_arr, int startPoint, int jobs_per_proc) {
-	for(int i = startPoint, int j = 0; 
-		i < (startPoint + jobs_per_proc), j < jobs_per_proc; 
-		i++, j++) {
-			sub_arr[j] = arr[i];
-		}
+	int j = 0;
+	for(int i = startPoint, i < (startPoint + jobs_per_proc); i++) {
+		sub_arr[j] = arr[i];
+		j++;
+	}
 }
 
 int has_suff_trues(int *total_nr_trues) {
-	int n = sizeof(a) / sizeof(int);
+	int n = sizeof(total_nr_trues) / sizeof(int);
 	int sum = 0;
 	for (int i; i < n; i++) {
 		sum += total_nr_trues[i];
@@ -127,7 +127,7 @@ void parallel_work(int nr_procs, int proc_id, int job_per_proc) {
 			int *sub_arr = allocate_mem(job_per_proc);
 			get_subset(arr, sub_arr, (id-1) * job_per_proc, job_per_proc);
 			MPI_Send(sub_arr, job_per_proc, MPI_INT, id, TAG_ARR_DATA, MPI_COMM_WORLD);
-			printf("Process 0 sent data %d to process 1\n", i, N);
+			printf("Process 0 sent data %d to process %d\n", job_per_proc, id);
 		}
 		
 		while (!has_suff_trues(total_nr_trues)) {
@@ -149,7 +149,7 @@ void parallel_work(int nr_procs, int proc_id, int job_per_proc) {
 
   	} 
 	else {
-		sub_arr = allocate_mem(job_per_proc); // allocate sufficient size to buffer 
+		int *sub_arr = allocate_mem(job_per_proc); // allocate sufficient size to buffer 
     	MPI_Recv(sub_arr, job_per_proc, MPI_INT, ROOT, TAG_ARR_DATA, MPI_COMM_WORLD, MPI_STATUS_IGNORE); // Every worker recieves work from root machine
 		printf("Process %d received data %d from process 0\n", proc_id, N);
 		for (int i = 0; i < job_per_proc; i++) {
