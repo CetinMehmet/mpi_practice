@@ -97,8 +97,9 @@ void get_subset(int *arr, int* sub_arr, int startPoint, int jobs_per_proc) {
 }
 
 int has_suff_trues(int *total_nr_trues) {
+	int n = sizeof(a) / sizeof(int);
 	int sum = 0;
-	for (int i; i < total_nr_trues; i++) {
+	for (int i; i < n; i++) {
 		sum += total_nr_trues[i];
 	} 
 	if (sum >= 100) {
@@ -122,7 +123,7 @@ void parallel_work(int nr_procs, int proc_id, int job_per_proc) {
 		int *arr = allocate_mem(N);
 		int *total_nr_trues = allocate_mem(nr_procs-1); // Have a slot in the array for each computing process
 		fill_ascending(arr, N);
-		for (int id = 1; id < nr_procs; i++) {
+		for (int id = 1; id < nr_procs; id++) {
 			int *sub_arr = allocate_mem(job_per_proc);
 			get_subset(arr, sub_arr, (id-1) * job_per_proc, job_per_proc);
 			MPI_Send(sub_arr, job_per_proc, MPI_INT, id, TAG_ARR_DATA, MPI_COMM_WORLD);
