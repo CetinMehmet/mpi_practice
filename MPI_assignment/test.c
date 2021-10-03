@@ -137,7 +137,9 @@ void do_job(int job_per_proc, int *sub_arr, int nr_procs) {
 // TODO: Use scatter and gather
 // Update nr_trues per 50 iteration
 void parallel_work(int nr_procs, int proc_id, int job_per_proc, int *arr) {
-	printf("Parallel program for processor %d has started!\n", proc_id);
+	FILE* fp = fopen("parallel_acs.txt", "w");
+
+	// printf("Parallel program for processor %d has started!\n", proc_id);
 	int nr_true = 0;
 	MPI_Request request; // request to send a message to reciever
 	if (proc_id == ROOT) { 			// Root machine: only distributes work
@@ -145,12 +147,12 @@ void parallel_work(int nr_procs, int proc_id, int job_per_proc, int *arr) {
 			int *sub_arr = allocate_mem(job_per_proc);
 			get_subset(arr, sub_arr, (id-1) * job_per_proc, job_per_proc);
 			MPI_Isend(sub_arr, job_per_proc, MPI_INT, id, TAG_ARR_DATA, MPI_COMM_WORLD, &request); 
-			printf("Process 0 sent data %d to process %d\n", job_per_proc, id);
+			// printf("Process 0 sent data %d to process %d\n", job_per_proc, id);
 		}
 		
 		int *total_nr_trues = allocate_mem(nr_procs-1); // Have a slot in the array for each computing process
 		fill_zeros(total_nr_trues);
-		printf("Checking if we have sufficient amount of trues.\n");
+		// printf("Checking if we have sufficient amount of trues.\n");
 		while (!has_suff_trues(total_nr_trues)) {
 			int flag = 0;
 			MPI_Status status;
@@ -163,6 +165,7 @@ void parallel_work(int nr_procs, int proc_id, int job_per_proc, int *arr) {
 				MPI_Iprobe(MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD, &flag, &status); // check for more updates
 			}
 		}
+		MPI_Abort(MPI_COMM_WORLD);
   	} 
 	else {
 		double time = -MPI_Wtime(); // This command helps us measure time. 
@@ -170,22 +173,16 @@ void parallel_work(int nr_procs, int proc_id, int job_per_proc, int *arr) {
 		int *sub_arr = allocate_mem(job_per_proc); // allocate sufficient size to buffer 
 		MPI_Status status;
 		MPI_Probe(ROOT, TAG_ARR_DATA, MPI_COMM_WORLD, &status); // Wait for pending messages
-		printf("process %d is recieving\n", proc_id);
+		// printf("process %d is recieving\n", proc_id);
     	MPI_Irecv(sub_arr, job_per_proc, MPI_INT, ROOT, TAG_ARR_DATA, MPI_COMM_WORLD, &request); // Every worker recieves work from root machine
   		MPI_Wait(&request, &status); // Wait for message to arrive
-		printf("Process %d received data %d from process 0\n", proc_id, job_per_proc);
+		// printf("Process %d received data %d from process 0\n", proc_id, job_per_proc);
 		do_job(job_per_proc, sub_arr, nr_procs);
 
 		time += MPI_Wtime();
-		printf("Procces %d finished the job in %f seconds\n", proc_id, time);
+		char* log_msg = ("Procces %d finished the job in %f seconds\n", proc_id, time);
+		fputs(log_msg, fp);
   	} 	
-
-	double final_time = 0.0;
-  	MPI_Reduce(&time, &final_time, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-
-	if (proc_id == ROOT) {
-		printf("Time for the program to finish is %f seconds\n", final_time);
-	}
 }
 
 
