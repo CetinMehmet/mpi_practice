@@ -144,7 +144,7 @@ void parallel_work(int nr_procs, int proc_id, int job_per_proc, int *arr) {
 		for (int id = 1; id < nr_procs; id++) {
 			int *sub_arr = allocate_mem(job_per_proc);
 			get_subset(arr, sub_arr, (id-1) * job_per_proc, job_per_proc);
-			MPI_Isend(sub_arr, job_per_proc, MPI_INT, id, TAG_ARR_DATA, MPI_COMM_WORLD, &request); 
+			MPI_Send(sub_arr, job_per_proc, MPI_INT, id, TAG_ARR_DATA, MPI_COMM_WORLD, &request); 
 			printf("Process 0 sent data %d to process %d\n", job_per_proc, id);
 		}
 		
@@ -203,6 +203,7 @@ int main(int argc, char *argv[]) {
   	double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
   	printf("Time spent (seconds) for the paralell version with %d processors: %f\n", nr_procs, time_spent);
 	
+	MPI_Barrier(MPI_COMM_WORLD);
 	MPI_Finalize(); // Finalize MPI env
   	
 }
