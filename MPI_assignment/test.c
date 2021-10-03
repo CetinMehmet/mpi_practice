@@ -163,23 +163,29 @@ void parallel_work(int nr_procs, int proc_id, int job_per_proc, int *arr) {
 				MPI_Iprobe(MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD, &flag, &status); // check for more updates
 			}
 		}
-
-		printf("MPI aborting process %d\n", proc_id);
-		// MPI_Abort(MPI_COMM_WORLD, ROOT); // Abort MPI if we have enough amount of trues, which is 100 for test1
-
   	} 
 	else {
+		double time = -MPI_Wtime(); // This command helps us measure time. 
+
 		int *sub_arr = allocate_mem(job_per_proc); // allocate sufficient size to buffer 
 		MPI_Status status;
-		printf("process %d is probing\n", proc_id);
 		MPI_Probe(ROOT, TAG_ARR_DATA, MPI_COMM_WORLD, &status); // Wait for pending messages
 		printf("process %d is recieving\n", proc_id);
     	MPI_Irecv(sub_arr, job_per_proc, MPI_INT, ROOT, TAG_ARR_DATA, MPI_COMM_WORLD, &request); // Every worker recieves work from root machine
   		MPI_Wait(&request, &status); // Wait for message to arrive
 		printf("Process %d received data %d from process 0\n", proc_id, job_per_proc);
 		do_job(job_per_proc, sub_arr, nr_procs);
-		printf("Procces %d finished the job\n", proc_id);
+
+		time += MPI_Wtime();
+		printf("Procces %d finished the job in %f seconds\n", proc_id, time);
   	} 	
+
+	double final_time = 0.0;
+  	MPI_Reduce(&time, &final_time, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+
+	if (proc_id == ROOT) {
+		printf("Time for the program to finish is %d seconds\n", final_time);
+	}
 }
 
 
@@ -203,9 +209,7 @@ int main(int argc, char *argv[]) {
 	
 	clock_t end = clock();
   	double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
-  	printf("Time spent (seconds) for the paralell version with %d processors: %f\n", nr_procs, time_spent);
 	
 	MPI_Barrier(MPI_COMM_WORLD);
-	MPI_Finalize(); // Finalize MPI env
-  	
+	MPI_Finalize(); // Finalize MPI env  	
 }
