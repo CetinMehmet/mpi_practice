@@ -5,7 +5,7 @@
 #include <math.h>
 #include "mpi.h"
 
-#define ROOT 1
+#define ROOT 0
 #define TAG_ARR_DATA 0
 #define TAG_NR_TRUES 1
 
