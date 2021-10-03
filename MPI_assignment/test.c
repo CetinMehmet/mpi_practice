@@ -165,7 +165,6 @@ void parallel_work(int nr_procs, int proc_id, int job_per_proc, int *arr) {
 				MPI_Iprobe(MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD, &flag, &status); // check for more updates
 			}
 		}
-		MPI_Abort(MPI_COMM_WORLD);
   	} 
 	else {
 		double time = -MPI_Wtime(); // This command helps us measure time. 
@@ -180,8 +179,11 @@ void parallel_work(int nr_procs, int proc_id, int job_per_proc, int *arr) {
 		do_job(job_per_proc, sub_arr, nr_procs);
 
 		time += MPI_Wtime();
-		char* log_msg = ("Procces %d finished the job in %f seconds\n", proc_id, time);
+		// printf("Procces %d finished the job in %f seconds\n", proc_id, time);
+	
+		char* log_msg = "Procces, seconds\n";
 		fputs(log_msg, fp);
+		fputs(proc_id, fp);
   	} 	
 }
 
