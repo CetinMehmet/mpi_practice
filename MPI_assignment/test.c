@@ -184,7 +184,7 @@ void parallel_work(int nr_procs, int proc_id, int job_per_proc, int *arr) {
   	MPI_Reduce(&time, &final_time, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 
 	if (proc_id == ROOT) {
-		printf("Time for the program to finish is %d seconds\n", final_time);
+		printf("Time for the program to finish is %f seconds\n", final_time);
 	}
 }
 
@@ -200,15 +200,10 @@ int main(int argc, char *argv[]) {
     MPI_Comm_rank(MPI_COMM_WORLD, &proc_id); 		// Get rank (id) of processors
 	MPI_Get_processor_name(proc_names, &name_len); 	// Get current processor name
 
-	clock_t begin = clock();
-
 	int job_per_proc = (N / (nr_procs - 1));
 	int *arr = allocate_mem(N);
 	fill_ascending(arr, N); // ascending work
 	parallel_work(nr_procs, proc_id, job_per_proc, arr);
-	
-	clock_t end = clock();
-  	double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
 	
 	MPI_Barrier(MPI_COMM_WORLD);
 	MPI_Finalize(); // Finalize MPI env  	
