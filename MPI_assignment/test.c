@@ -136,55 +136,24 @@ void do_job(int job_per_proc, int *sub_arr, int nr_procs) {
 
 // TODO: Use scatter and gather
 // Update nr_trues per 50 iteration
-void parallel_work(int nr_procs, int proc_id, int job_per_proc, int *arr) {
-	FILE* fp = fopen("parallel_acs.txt", "w");
+void parallel_work(int nr_procs, int proc_id) {
 
-	// printf("Parallel program for processor %d has started!\n", proc_id);
+	printf("Parallel program for processor %d has started!\n", proc_id);
+	int job_per_proc = (N / (nr_procs);
 	int nr_true = 0;
-	MPI_Request request; // request to send a message to reciever
-	if (proc_id == ROOT) { 			// Root machine: only distributes work
-		for (int id = 1; id < nr_procs; id++) {
-			int *sub_arr = allocate_mem(job_per_proc);
-			get_subset(arr, sub_arr, (id-1) * job_per_proc, job_per_proc);
-			MPI_Isend(sub_arr, job_per_proc, MPI_INT, id, TAG_ARR_DATA, MPI_COMM_WORLD, &request); 
-			// printf("Process 0 sent data %d to process %d\n", job_per_proc, id);
-		}
-		
-		int *total_nr_trues = allocate_mem(nr_procs-1); // Have a slot in the array for each computing process
-		fill_zeros(total_nr_trues);
-		// printf("Checking if we have sufficient amount of trues.\n");
-		while (!has_suff_trues(total_nr_trues)) {
-			int flag = 0;
-			MPI_Status status;
-			MPI_Iprobe(MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD, &flag, &status); // Implicit recieve
-			while (flag) {
-				// Handle the nr_trues
-				int source = status.MPI_SOURCE;
-				MPI_Recv(&nr_true, 1, MPI_INT, source, TAG_NR_TRUES, MPI_COMM_WORLD, &status);
-				total_nr_trues[source-1] = nr_true; // Update the nr_trues coming from process 'source'
-				MPI_Iprobe(MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD, &flag, &status); // check for more updates
-			}
-		}
+	if (proc_id == ROOT) { 			// Root machine distributes work
+		int *arr = allocate_mem(N);
+		fill_ascending(arr, N); 	// ascending work
   	} 
-	else {
-		double time = -MPI_Wtime(); // This command helps us measure time. 
 
-		int *sub_arr = allocate_mem(job_per_proc); // allocate sufficient size to buffer 
-		MPI_Status status;
-		MPI_Probe(ROOT, TAG_ARR_DATA, MPI_COMM_WORLD, &status); // Wait for pending messages
-		// printf("process %d is recieving\n", proc_id);
-    	MPI_Irecv(sub_arr, job_per_proc, MPI_INT, ROOT, TAG_ARR_DATA, MPI_COMM_WORLD, &request); // Every worker recieves work from root machine
-  		MPI_Wait(&request, &status); // Wait for message to arrive
-		// printf("Process %d received data %d from process 0\n", proc_id, job_per_proc);
-		do_job(job_per_proc, sub_arr, nr_procs);
+	int *sub_arr = allocate_mem(job_per_proc);
+	// Scatter the random numbers from the root process to all processes in the MPI world
+  	MPI_Scatter(arr, job_per_proc, MPI_INT, sub_arr, job_per_proc, MPI_INT, ROOT, MPI_COMM_WORLD);
 
-		time += MPI_Wtime();
-		// printf("Procces %d finished the job in %f seconds\n", proc_id, time);
-	
-		char* log_msg = "Procces, seconds\n";
-		fputs(log_msg, fp);
-		fputs(proc_id, fp);
-  	} 	
+	double time = -MPI_Wtime(); // This command helps us measure time. 
+	do_job(job_per_proc, sub_arr, nr_procs);
+	time += MPI_Wtime();
+	printf("Procces %d finished the job in %f seconds\n", proc_id, time);
 }
 
 
@@ -198,11 +167,8 @@ int main(int argc, char *argv[]) {
 	MPI_Comm_size(MPI_COMM_WORLD, &nr_procs); 		// Get number of processors we are gonna use for the job
     MPI_Comm_rank(MPI_COMM_WORLD, &proc_id); 		// Get rank (id) of processors
 	MPI_Get_processor_name(proc_names, &name_len); 	// Get current processor name
-
-	int job_per_proc = (N / (nr_procs - 1));
-	int *arr = allocate_mem(N);
-	fill_ascending(arr, N); // ascending work
-	parallel_work(nr_procs, proc_id, job_per_proc, arr);
+	
+	parallel_work(nr_procs, proc_id);
 	
 	MPI_Barrier(MPI_COMM_WORLD);
 	MPI_Finalize(); // Finalize MPI env  	
