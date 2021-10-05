@@ -129,12 +129,9 @@ void parallel_work(int nr_procs, int proc_id, char* work_type) {
 
 	printf("Parallel program for processor %d has started!\n", proc_id);
 	int job_per_proc = (N / (nr_procs));
-	int nr_true = 0;
-
 	int *sub_arr = allocate_mem(job_per_proc);
-	// Scatter the random numbers from the root process to all processes in the MPI world
-  	MPI_Scatter(arr, job_per_proc, MPI_INT, sub_arr, job_per_proc, MPI_INT, ROOT, MPI_COMM_WORLD);
-
+	int *arr; 
+	
 	if (proc_id == ROOT) { 			// Root machine distributes work
 		int *arr = allocate_mem(N);
 		if (strcmp(work_type, "asc") == 0) {
@@ -144,7 +141,11 @@ void parallel_work(int nr_procs, int proc_id, char* work_type) {
 		} else {
 			printf("Wrong filling for the array.\n"); exit(1);
 		}
+	}
+	// Scatter the random numbers from the root process to all processes in the MPI world
+  	MPI_Scatter(arr, job_per_proc, MPI_INT, sub_arr, job_per_proc, MPI_INT, ROOT, MPI_COMM_WORLD);
 
+	if (proc_id == ROOT) { 			// Root machine distributes work
 		double time_root = -MPI_Wtime(); // This command helps us measure time. 
 		int total_nr_true = 0;
 		while (total_nr_true < 100) {
@@ -164,7 +165,7 @@ void parallel_work(int nr_procs, int proc_id, char* work_type) {
 			do_job(job_per_proc, sub_arr); // While total_nr_true is below 100, keep computing.
 			
 		}
-		double time_root = -MPI_Wtime(); // This command helps us measure time. 
+		time_root += MPI_Wtime(); // This command helps us measure time. 
 		printf("Procces %d finished the job in %f seconds\n", proc_id, time_root);
   	} 
 
