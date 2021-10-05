@@ -139,7 +139,7 @@ void do_job(int job_per_proc, int *sub_arr) {
 
 // TODO: Use scatter and gather
 // Update nr_trues per 50 iteration
-void parallel_work(int nr_procs, int proc_id) {
+void parallel_work(int nr_procs, int proc_id, char* work_type) {
 
 	printf("Parallel program for processor %d has started!\n", proc_id);
 	int job_per_proc = (N / (nr_procs);
@@ -151,7 +151,14 @@ void parallel_work(int nr_procs, int proc_id) {
 
 	if (proc_id == ROOT) { 			// Root machine distributes work
 		int *arr = allocate_mem(N);
-		fill_ascending(arr, N); 	// ascending work
+		if (strcmp(work_type, "asc") == 0) {
+			fill_ascending(arr, N); 	
+		} else if (strcmp(work_type, "rand")) {
+			fill_random(arr, N);
+		} else {
+			printf("Wrong filling for the array.\n");
+			exit();
+		}
 
 		double time = -MPI_Wtime(); // This command helps us measure time. 
 		int total_nr_true = 0;
@@ -190,7 +197,7 @@ int main(int argc, char *argv[]) {
 	MPI_Comm_size(MPI_COMM_WORLD, &nr_procs); 		// Get number of processors we are gonna use for the job
     MPI_Comm_rank(MPI_COMM_WORLD, &proc_id); 		// Get rank (id) of processors
 	
-	parallel_work(nr_procs, proc_id);
+	parallel_work(nr_procs, proc_id, "asc");
 	
 	MPI_Finalize(); // Finalize MPI env  	
 }
