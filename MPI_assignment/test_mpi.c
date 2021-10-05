@@ -4,6 +4,7 @@
 #include <time.h>
 #include <math.h>
 #include "mpi.h"
+#include <string.h>
 
 #define ROOT 0
 #define TAG_ARR_DATA 0
@@ -136,13 +137,10 @@ void do_job(int job_per_proc, int *sub_arr) {
 	so that all processes can terminate as fast as possible (When nr_trues >= 100). 
 	- Root machine uses async non-blocking send 
 */
-
-// TODO: Use scatter and gather
-// Update nr_trues per 50 iteration
 void parallel_work(int nr_procs, int proc_id, char* work_type) {
 
 	printf("Parallel program for processor %d has started!\n", proc_id);
-	int job_per_proc = (N / (nr_procs);
+	int job_per_proc = (N / (nr_procs));
 	int nr_true = 0;
 
 	int *sub_arr = allocate_mem(job_per_proc);
@@ -156,11 +154,10 @@ void parallel_work(int nr_procs, int proc_id, char* work_type) {
 		} else if (strcmp(work_type, "rand")) {
 			fill_random(arr, N);
 		} else {
-			printf("Wrong filling for the array.\n");
-			exit();
+			printf("Wrong filling for the array.\n"); exit(1);
 		}
 
-		double time = -MPI_Wtime(); // This command helps us measure time. 
+		double time_root = -MPI_Wtime(); // This command helps us measure time. 
 		int total_nr_true = 0;
 		while (total_nr_true < 100) {
 			int flag = 0;
@@ -177,7 +174,7 @@ void parallel_work(int nr_procs, int proc_id, char* work_type) {
 				MPI_Iprobe(MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD, &flag, &status); // check for more updates
 			}
 			do_job(job_per_proc, sub_arr, nr_procs); // While total_nr_true is below 100, keep computing.
-			printf("Procces %d finished the job in %f seconds\n", proc_id, time);
+			printf("Procces %d finished the job in %f seconds\n", proc_id, time_root);
 		}
 		double time = -MPI_Wtime(); // This command helps us measure time. 
   	} 
