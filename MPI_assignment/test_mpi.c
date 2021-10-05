@@ -115,15 +115,18 @@ int has_suff_trues(int *total_nr_trues) {
 	return 0;
 }
 
-void do_job(int job_per_proc, int *sub_arr, int nr_procs) {
+void do_job(int job_per_proc, int *sub_arr) {
 	int nr_true = 0;
 	for (int i = 0; i < job_per_proc; i++) {
+		if (nr_true >= 100) {
+			return; // ** Stop computation immediatly after reaching 100 trues
+		}
+
 		int result = test(sub_arr[i]);
 		if (result) {
 			nr_true++;
-		}
-		if (nr_true % (R / nr_procs) == 0) { // If nr_true is equal to 50 (R:100 / nr_procs:2)
-			MPI_Send(&nr_true, 1, MPI_INT, ROOT, TAG_NR_TRUES, MPI_COMM_WORLD); // Send nr_true, where tag is 1, to root process so it can be updated. 
+			MPI_Send(&nr_true, 1, MPI_INT, ROOT, TAG_NR_TRUES, MPI_COMM_WORLD); 
+			nr_true = 0;
 		}
 	}
 }
@@ -141,14 +144,36 @@ void parallel_work(int nr_procs, int proc_id) {
 	printf("Parallel program for processor %d has started!\n", proc_id);
 	int job_per_proc = (N / (nr_procs);
 	int nr_true = 0;
-	if (proc_id == ROOT) { 			// Root machine distributes work
-		int *arr = allocate_mem(N);
-		fill_ascending(arr, N); 	// ascending work
-  	} 
 
 	int *sub_arr = allocate_mem(job_per_proc);
 	// Scatter the random numbers from the root process to all processes in the MPI world
   	MPI_Scatter(arr, job_per_proc, MPI_INT, sub_arr, job_per_proc, MPI_INT, ROOT, MPI_COMM_WORLD);
+
+	if (proc_id == ROOT) { 			// Root machine distributes work
+		int *arr = allocate_mem(N);
+		fill_ascending(arr, N); 	// ascending work
+
+		double time = -MPI_Wtime(); // This command helps us measure time. 
+		int total_nr_true = 0;
+		while (total_nr_true < 100) {
+			int flag = 0;
+			MPI_Status status;
+			MPI_Iprobe(MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD, &flag, &status); // ** Implicit recieving
+			while (flag) {
+				int nr_true = 0;
+				int source = status.MPI_SOURCE;
+				MPI_Recv(&nr_true, 1, MPI_INT, source, TAG_NR_TRUES, MPI_COMM_WORLD, &status);
+				total_nr_true += nr_true; // Update the nr_trues coming from process 'source'
+				if (total_nr_true >= 100) { // If we always recieve a message and can't get out of this loop, we return ASAP
+					break;
+				}
+				MPI_Iprobe(MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD, &flag, &status); // check for more updates
+			}
+			do_job(job_per_proc, sub_arr, nr_procs); // While total_nr_true is below 100, keep computing.
+			printf("Procces %d finished the job in %f seconds\n", proc_id, time);
+		}
+		double time = -MPI_Wtime(); // This command helps us measure time. 
+  	} 
 
 	double time = -MPI_Wtime(); // This command helps us measure time. 
 	do_job(job_per_proc, sub_arr, nr_procs);
@@ -162,14 +187,10 @@ int main(int argc, char *argv[]) {
 	MPI_Init(&argc, &argv); 						
 	int nr_procs = 0;
 	int proc_id = -1;
-	int name_len = 0; 
-	char proc_names[MPI_MAX_PROCESSOR_NAME];
 	MPI_Comm_size(MPI_COMM_WORLD, &nr_procs); 		// Get number of processors we are gonna use for the job
     MPI_Comm_rank(MPI_COMM_WORLD, &proc_id); 		// Get rank (id) of processors
-	MPI_Get_processor_name(proc_names, &name_len); 	// Get current processor name
 	
 	parallel_work(nr_procs, proc_id);
 	
-	MPI_Barrier(MPI_COMM_WORLD);
 	MPI_Finalize(); // Finalize MPI env  	
 }
