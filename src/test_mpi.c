@@ -116,7 +116,7 @@ void do_job(int job_per_proc, int *sub_arr) {
 		if (result) {
 			nr_true++;
 			MPI_Request req;
-			MPI_Isend(&temp, 1, MPI_INT, ROOT, TAG_NR_TRUES, MPI_COMM_WORLD);  
+			MPI_Isend(&temp, 1, MPI_INT, ROOT, TAG_NR_TRUES, MPI_COMM_WORLD, &req);  
 			MPI_Request_free(&req); // Free request because we have nothing to do with it.
 		}
 	}
@@ -147,6 +147,7 @@ void parallel_work(int nr_procs, int proc_id, char* work_type) {
 	}
 	// Scatter the random numbers from the root process to all processes in the MPI world
   	MPI_Scatter(arr, job_per_proc, MPI_INT, sub_arr, job_per_proc, MPI_INT, ROOT, MPI_COMM_WORLD);
+	printf("Scattered proc: %d\n", proc_id);
 
 	if (proc_id == ROOT) { 			// Root machine distributes work
 		double time_root = -MPI_Wtime(); // This command helps us measure time. 
@@ -179,8 +180,9 @@ void parallel_work(int nr_procs, int proc_id, char* work_type) {
 		time_root += MPI_Wtime(); // This command helps us measure time. 
 		printf("Process %d finished the job in %f seconds\n", proc_id, time_root);
   	} 
-	else {
+	else { 
 		double time = -MPI_Wtime(); // This command helps us measure time. 
+		printf("proc %d started job!\n", proc_id);
 		do_job(job_per_proc, sub_arr);
 		time += MPI_Wtime();
 		printf("Process %d finished the job in %f seconds\n", proc_id, time);
