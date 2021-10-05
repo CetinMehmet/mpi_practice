@@ -106,7 +106,6 @@ void fill_zeros(int *arr) {
 
 void do_job(int job_per_proc, int *sub_arr) {
 	int nr_true = 0;
-	int temp = 1;
 	for (int i = 0; i < job_per_proc; i++) {
 		if (nr_true >= 100) {
 			return; // ** Stop computation immediatly after reaching 100 trues
@@ -116,9 +115,7 @@ void do_job(int job_per_proc, int *sub_arr) {
 		if (result) {
 			printf("Sending a true from proc 1 to 0\n");
 			nr_true++;
-			MPI_Request req;
-			MPI_Isend(&temp, 1, MPI_INT, ROOT, TAG_NR_TRUES, MPI_COMM_WORLD, &req);  
-			MPI_Request_free(&req); // Free request because we have nothing to do with it.
+			MPI_Send(nr_true, 1, MPI_INT, ROOT, TAG_NR_TRUES, MPI_COMM_WORLD);  
 		}
 	}
 }
@@ -155,12 +152,13 @@ void parallel_work(int nr_procs, int proc_id, char* work_type) {
 		int total_nr_true = 0; 
 		int i = 0;
 		while (total_nr_true < 100 && i < job_per_proc) {
+			int curr_true = 0;
 			// Computation that the root process does
 			printf("total nr trues in outside loop for proc 0: %d.\n", total_nr_true);
 			int result = test(sub_arr[i]);
 			i++;
 			if (result) {
-				total_nr_true++;
+				curr_true++;
 				printf("Curr total nr trues: %d\n", total_nr_true);
 				if (total_nr_true >= 100) {
 					break;
@@ -172,7 +170,9 @@ void parallel_work(int nr_procs, int proc_id, char* work_type) {
 			MPI_Iprobe(MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD, &flag, &status); // ** Implicit recieving
 			// If there is a message from any process, we know it's a true with the quantity of 1.
 			while (flag) {
-				total_nr_true++;
+				int other_true = 0;
+				MPI_Recv(&other_true, 1, MPI_INT, MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+				total_nr_true = curr_true + other_true;
 				printf("total trues in flag loop: %d\n", total_nr_true); 
 				if (total_nr_true >= 100) { // If we always recieve a message and can't get out of this loop, we return ASAP
 					break;
@@ -182,7 +182,6 @@ void parallel_work(int nr_procs, int proc_id, char* work_type) {
 		}
 		time_root += MPI_Wtime(); // This command helps us measure time. 
 		printf("Process %d finished the job in %f seconds\n", proc_id, time_root); 
-		MPI_Finalize(); // Finalize MPI env  	
 	}
 	else { 
 		double time = -MPI_Wtime(); // This command helps us measure time. 
