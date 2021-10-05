@@ -115,7 +115,7 @@ void do_job(int job_per_proc, int *sub_arr) {
 		if (result) {
 			printf("Sending a true from proc 1 to 0\n");
 			nr_true++;
-			MPI_Send(nr_true, 1, MPI_INT, ROOT, TAG_NR_TRUES, MPI_COMM_WORLD);  
+			MPI_Send(&nr_true, 1, MPI_INT, ROOT, TAG_NR_TRUES, MPI_COMM_WORLD);  
 		}
 	}
 }
@@ -145,7 +145,6 @@ void parallel_work(int nr_procs, int proc_id, char* work_type) {
 	}
 	// Scatter the random numbers from the root process to all processes in the MPI world
   	MPI_Scatter(arr, job_per_proc, MPI_INT, sub_arr, job_per_proc, MPI_INT, ROOT, MPI_COMM_WORLD);
-	printf("Scattered proc: %d\n", proc_id);
 
 	if (proc_id == ROOT) { 			
 		double time_root = -MPI_Wtime(); // This command helps us measure time. 
@@ -154,12 +153,10 @@ void parallel_work(int nr_procs, int proc_id, char* work_type) {
 		while (total_nr_true < 100 && i < job_per_proc) {
 			int curr_true = 0;
 			// Computation that the root process does
-			printf("total nr trues in outside loop for proc 0: %d.\n", total_nr_true);
 			int result = test(sub_arr[i]);
 			i++;
 			if (result) {
 				curr_true++;
-				printf("Curr total nr trues: %d\n", total_nr_true);
 				if (total_nr_true >= 100) {
 					break;
 				}
@@ -182,6 +179,7 @@ void parallel_work(int nr_procs, int proc_id, char* work_type) {
 		}
 		time_root += MPI_Wtime(); // This command helps us measure time. 
 		printf("Process %d finished the job in %f seconds\n", proc_id, time_root); 
+		MPI_Finalize(); // Finalize MPI env when total nr trues is 100  	
 	}
 	else { 
 		double time = -MPI_Wtime(); // This command helps us measure time. 
