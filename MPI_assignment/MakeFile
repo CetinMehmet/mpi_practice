@@ -1,11 +1,11 @@
 EXECS=test
-MPICC?=${HOME}/opt/usr/local/bin/mpicc -Wall -O3 -o test test.c -lm
+MPICC?=${HOME}/opt/usr/local/bin/mpicc -Wall -O3 -o test_mpi test_mpi.c -lm
 GCC_NO_COMMON_BLOCKS = NO 
 
 all: ${EXECS}
 
 test:test.c
-	${MPICC} -Wall -O3 -o test test.c -lm
+	${MPICC} -Wall -O3 -o test_mpi test_mpi.c -lm
 
 clean:
 	rm -f *.o ${EXECS} *~ *core

@@ -104,18 +104,6 @@ void fill_zeros(int *arr) {
 	}
 }
 
-int has_suff_trues(int *total_nr_trues) {
-	int n = sizeof(total_nr_trues) / sizeof(int);
-	int sum = 0;
-	for (int i = 0; i < n; i++) {
-		sum += total_nr_trues[i];
-	} 
-	if (sum >= 100) {
-		return 1;
-	}
-	return 0;
-}
-
 void do_job(int job_per_proc, int *sub_arr) {
 	int nr_true = 0;
 	for (int i = 0; i < job_per_proc; i++) {
