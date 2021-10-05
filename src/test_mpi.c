@@ -131,9 +131,9 @@ void parallel_work(int nr_procs, int proc_id, char* work_type) {
 	int job_per_proc = (N / (nr_procs));
 	int *sub_arr = allocate_mem(job_per_proc);
 	int *arr; 
-	
+
 	if (proc_id == ROOT) { 			// Root machine distributes work
-		int *arr = allocate_mem(N);
+		arr = allocate_mem(N);
 		if (strcmp(work_type, "asc") == 0) {
 			fill_ascending(arr, N); 	
 		} else if (strcmp(work_type, "rand")) {
@@ -166,13 +166,14 @@ void parallel_work(int nr_procs, int proc_id, char* work_type) {
 			
 		}
 		time_root += MPI_Wtime(); // This command helps us measure time. 
-		printf("Procces %d finished the job in %f seconds\n", proc_id, time_root);
+		printf("Process %d finished the job in %f seconds\n", proc_id, time_root);
   	} 
-
-	double time = -MPI_Wtime(); // This command helps us measure time. 
-	do_job(job_per_proc, sub_arr);
-	time += MPI_Wtime();
-	printf("Procces %d finished the job in %f seconds\n", proc_id, time);
+	else {
+		double time = -MPI_Wtime(); // This command helps us measure time. 
+		do_job(job_per_proc, sub_arr);
+		time += MPI_Wtime();
+		printf("Process %d finished the job in %f seconds\n", proc_id, time);
+	}
 }
 
 
