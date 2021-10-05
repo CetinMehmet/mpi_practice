@@ -114,6 +114,7 @@ void do_job(int job_per_proc, int *sub_arr) {
 
 		int result = test(sub_arr[i]);
 		if (result) {
+			printf("Sending a true from proc 1 to 0\n");
 			nr_true++;
 			MPI_Request req;
 			MPI_Isend(&temp, 1, MPI_INT, ROOT, TAG_NR_TRUES, MPI_COMM_WORLD, &req);  
@@ -155,7 +156,7 @@ void parallel_work(int nr_procs, int proc_id, char* work_type) {
 		int i = 0;
 		while (total_nr_true < 100 && i < job_per_proc) {
 			// Computation that the root process does
-			printf("proc 0 started!\n");
+			printf("total nr trues in outside loop for proc 0: %d.\n", total_nr_true);
 			int result = test(sub_arr[i]);
 			i++;
 			if (result) {
@@ -181,6 +182,7 @@ void parallel_work(int nr_procs, int proc_id, char* work_type) {
 		}
 		time_root += MPI_Wtime(); // This command helps us measure time. 
 		printf("Process %d finished the job in %f seconds\n", proc_id, time_root); 
+		MPI_Finalize(); // Finalize MPI env  	
 	}
 	else { 
 		double time = -MPI_Wtime(); // This command helps us measure time. 
