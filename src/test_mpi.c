@@ -152,17 +152,6 @@ void parallel_work(int nr_procs, int proc_id, char* work_type) {
 		double time_root = -MPI_Wtime(); // This command helps us measure time. 
 		int total_nr_true = 0;
 		while (total_nr_true < 100) {
-			int flag = 0;
-			MPI_Status status;
-			MPI_Iprobe(MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD, &flag, &status); // ** Implicit recieving
-			// If there is a message from any process, we know it's a true with the quantity 1.
-			while (flag) {
-				total_nr_true++; 
-				if (total_nr_true >= 100) { // If we always recieve a message and can't get out of this loop, we return ASAP
-					break;
-				}
-				MPI_Iprobe(MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD, &flag, &status); // check for more updates
-			}
 			// Computation that the root process does
 			for (int i = 0; i < job_per_proc; i++) {
 				int result = test(sub_arr[i]);
@@ -172,6 +161,18 @@ void parallel_work(int nr_procs, int proc_id, char* work_type) {
 					if (total_nr_true >= 100) {
 						break;
 					}
+				}
+				// Check if there is a message from another process to update the nr_trues.
+				int flag = 0;
+				MPI_Status status;
+				MPI_Iprobe(MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD, &flag, &status); // ** Implicit recieving
+				// If there is a message from any process, we know it's a true with the quantity of 1.
+				while (flag) {
+					total_nr_true++; 
+					if (total_nr_true >= 100) { // If we always recieve a message and can't get out of this loop, we return ASAP
+						break;
+					}
+					MPI_Iprobe(MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD, &flag, &status); // check for more updates
 				}
 			}
 		}
