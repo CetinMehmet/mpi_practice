@@ -106,6 +106,7 @@ void fill_zeros(int *arr) {
 
 void do_job(int job_per_proc, int *sub_arr) {
 	int nr_true = 0;
+	int temp = 1;
 	for (int i = 0; i < job_per_proc; i++) {
 		if (nr_true >= 100) {
 			return; // ** Stop computation immediatly after reaching 100 trues
@@ -114,8 +115,9 @@ void do_job(int job_per_proc, int *sub_arr) {
 		int result = test(sub_arr[i]);
 		if (result) {
 			nr_true++;
-			MPI_Send(&nr_true, 1, MPI_INT, ROOT, TAG_NR_TRUES, MPI_COMM_WORLD); 
-			nr_true = 0;
+			MPI_Request req;
+			MPI_Isend(&temp, 1, MPI_INT, ROOT, TAG_NR_TRUES, MPI_COMM_WORLD);  
+			MPI_Request_free(&req); // Free request because we have nothing to do with it.
 		}
 	}
 }
@@ -153,11 +155,9 @@ void parallel_work(int nr_procs, int proc_id, char* work_type) {
 			int flag = 0;
 			MPI_Status status;
 			MPI_Iprobe(MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD, &flag, &status); // ** Implicit recieving
+			// If there is a message from any process, we know it's a true with the quantity 1.
 			while (flag) {
-				int nr_true = 0;
-				int source = status.MPI_SOURCE;
-				MPI_Recv(&nr_true, 1, MPI_INT, source, TAG_NR_TRUES, MPI_COMM_WORLD, &status);
-				total_nr_true += nr_true; // Update the nr_trues coming from process 'source'
+				total_nr_true++; 
 				if (total_nr_true >= 100) { // If we always recieve a message and can't get out of this loop, we return ASAP
 					break;
 				}
@@ -168,6 +168,7 @@ void parallel_work(int nr_procs, int proc_id, char* work_type) {
 				int result = test(sub_arr[i]);
 				if (result) {
 					total_nr_true++;
+					printf("Curr total nr trues: %d\n", total_nr_true);
 					if (total_nr_true >= 100) {
 						break;
 					}
