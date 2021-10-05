@@ -161,14 +161,15 @@ void parallel_work(int nr_procs, int proc_id, char* work_type) {
 				}
 				MPI_Iprobe(MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD, &flag, &status); // check for more updates
 			}
-			do_job(job_per_proc, sub_arr, nr_procs); // While total_nr_true is below 100, keep computing.
-			printf("Procces %d finished the job in %f seconds\n", proc_id, time_root);
+			do_job(job_per_proc, sub_arr); // While total_nr_true is below 100, keep computing.
+			
 		}
-		double time = -MPI_Wtime(); // This command helps us measure time. 
+		double time_root = -MPI_Wtime(); // This command helps us measure time. 
+		printf("Procces %d finished the job in %f seconds\n", proc_id, time_root);
   	} 
 
 	double time = -MPI_Wtime(); // This command helps us measure time. 
-	do_job(job_per_proc, sub_arr, nr_procs);
+	do_job(job_per_proc, sub_arr);
 	time += MPI_Wtime();
 	printf("Procces %d finished the job in %f seconds\n", proc_id, time);
 }
