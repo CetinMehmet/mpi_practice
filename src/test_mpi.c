@@ -119,6 +119,7 @@ void do_job(int job_per_proc, int *sub_arr) {
 		}
 	}
 }
+
 /*
 	- To reduce the communication overhead, we will reserve (N / nr_procs) job per processor
 	- Make sure that the program keeps track of how many successful elements (number of trues) all processes have found together, 
@@ -130,7 +131,7 @@ void parallel_work(int nr_procs, int proc_id, char* work_type) {
 	printf("Parallel program for processor %d has started!\n", proc_id);
 	int job_per_proc = (N / (nr_procs));
 	int *sub_arr = allocate_mem(job_per_proc);
-	int *arr; 
+	int *arr = NULL; 
 
 	if (proc_id == ROOT) { 			// Root machine distributes work
 		arr = allocate_mem(N);
@@ -162,8 +163,16 @@ void parallel_work(int nr_procs, int proc_id, char* work_type) {
 				}
 				MPI_Iprobe(MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD, &flag, &status); // check for more updates
 			}
-			do_job(job_per_proc, sub_arr); // While total_nr_true is below 100, keep computing.
-			
+			// Computation that the root process does
+			for (int i = 0; i < job_per_proc; i++) {
+				int result = test(sub_arr[i]);
+				if (result) {
+					total_nr_true++;
+					if (total_nr_true >= 100) {
+						break;
+					}
+				}
+			}
 		}
 		time_root += MPI_Wtime(); // This command helps us measure time. 
 		printf("Process %d finished the job in %f seconds\n", proc_id, time_root);
