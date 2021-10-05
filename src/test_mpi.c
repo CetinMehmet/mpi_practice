@@ -10,6 +10,7 @@
 #define TAG_ARR_DATA 0
 #define TAG_NR_TRUES 1
 
+int halt_jobs = 0;
 int N = 500;
 int R = 100;
 
@@ -55,7 +56,6 @@ int *allocate_mem(int N) {
 
 void fill_random(int *A, int N) {
 	srand(time(0));
-
 	for (int i = 0; i < N; i++) {
 		A[i] = (rand() % N);
 	}
@@ -67,28 +67,32 @@ void fill_ascending(int *A, int N) {
   }
 }
 
-void sequential() {
-	int *arr = allocate_mem(N);
-	fill_random(arr, N);
-	int nr_true = 0;
-	
+void sequential(char *work_type) {
 	printf("Sequential program has started!\n");
-	clock_t begin = clock();
 
+	arr = allocate_mem(N);
+	if (strcmp(work_type, "asc") == 0) {
+		fill_ascending(arr, N); 	
+	} else if (strcmp(work_type, "rand")) {
+		fill_random(arr, N);
+	} else {
+		printf("Wrong filling for the array.\n"); exit(1);
+	}
+	
+	int nr_true = 0;
+	double time_root = -MPI_Wtime(); // This command helps us measure time. 
 	for (int i = 0; i < N; i++) {
 		int result = test(arr[i]);
 		if (result) {
-		nr_true++;
+			nr_true++;
 		}
 	}
 
-  	clock_t end = clock();
-  	double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+  	time_root += MPI_Wtime();
   	printf("Time spent (seconds) for the sequential version: %f\n", time_spent);
-
-  	printf("Number of trues for N=%d, R=%d: %d\n", N, R, nr_true);
 }
 
+/* Might be required in the future for point-to-point work distribution
 void get_subset(int *arr, int* sub_arr, int startPoint, int jobs_per_proc) {
 	int j = 0;
 	for(int i = startPoint; i < (startPoint + jobs_per_proc); i++) {
@@ -96,24 +100,20 @@ void get_subset(int *arr, int* sub_arr, int startPoint, int jobs_per_proc) {
 		j++;
 	}
 }
-
-void fill_zeros(int *arr) {
-	int n = sizeof(arr) / sizeof(int);
-	for (int i = 0; i < n; i++) {
-		arr[i] = 0;
-	}
-}
+*/
 
 void do_job(int job_per_proc, int *sub_arr) {
 	int nr_true = 0;
 	for (int i = 0; i < job_per_proc; i++) {
+		if (halt_jobs) {
+			return;
+		}
 		if (nr_true >= 100) {
 			return; // ** Stop computation immediatly after reaching 100 trues
 		}
 
 		int result = test(sub_arr[i]);
 		if (result) {
-			printf("Sending a true from proc 1 to 0\n");
 			nr_true++;
 			MPI_Send(&nr_true, 1, MPI_INT, ROOT, TAG_NR_TRUES, MPI_COMM_WORLD);  
 		}
@@ -170,23 +170,23 @@ void parallel_work(int nr_procs, int proc_id, char* work_type) {
 				int other_true = 0;
 				MPI_Recv(&other_true, 1, MPI_INT, MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 				total_nr_true = curr_true + other_true;
-				printf("total trues in flag loop: %d\n", total_nr_true); 
 				if (total_nr_true >= 100) { // If we always recieve a message and can't get out of this loop, we return ASAP
 					break;
 				}
 				MPI_Iprobe(MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD, &flag, &status); // check for more updates
 			}
 		}
+		halt_jobs = 1;
 		time_root += MPI_Wtime(); // This command helps us measure time. 
 		printf("Process %d finished the job in %f seconds\n", proc_id, time_root); 
-		MPI_Finalize(); // Finalize MPI env when total nr trues is 100  	
+		return;
 	}
 	else { 
 		double time = -MPI_Wtime(); // This command helps us measure time. 
-		printf("proc %d started job!\n", proc_id);
 		do_job(job_per_proc, sub_arr);
 		time += MPI_Wtime();
 		printf("Process %d finished the job in %f seconds\n", proc_id, time);
+		return;
 	}
 }
 
