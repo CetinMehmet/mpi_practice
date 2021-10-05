@@ -155,6 +155,7 @@ void parallel_work(int nr_procs, int proc_id, char* work_type) {
 		int i = 0;
 		while (total_nr_true < 100 && i < job_per_proc) {
 			// Computation that the root process does
+			printf("proc 0 started!\n");
 			int result = test(sub_arr[i]);
 			i++;
 			if (result) {
@@ -170,7 +171,8 @@ void parallel_work(int nr_procs, int proc_id, char* work_type) {
 			MPI_Iprobe(MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD, &flag, &status); // ** Implicit recieving
 			// If there is a message from any process, we know it's a true with the quantity of 1.
 			while (flag) {
-				total_nr_true++; 
+				total_nr_true++;
+				printf("total trues in flag loop: %d\n", total_nr_true); 
 				if (total_nr_true >= 100) { // If we always recieve a message and can't get out of this loop, we return ASAP
 					break;
 				}
