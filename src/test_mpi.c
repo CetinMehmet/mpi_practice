@@ -10,7 +10,6 @@
 #define TAG_ARR_DATA 0
 #define TAG_NR_TRUES 1
 
-int halt_jobs = 0;
 int N = 500;
 int R = 100;
 
@@ -24,8 +23,11 @@ int test(int x) {
 		xd = sin(xd);
 		xd = asin(xd);
 	}
-	xd = sin(xd);
 
+	// between sin(210) and sin(330) is below -0.5
+	// In trigonometer, if xd is over 2 M_PI, we subtract till xd is below 2 M_PI 
+	xd = sin(xd); 
+	
 	// Test the result.
 	return xd < -0.5;
 }
@@ -106,9 +108,6 @@ void get_subset(int *arr, int* sub_arr, int startPoint, int jobs_per_proc) {
 void do_job(int job_per_proc, int *sub_arr) {
 	int nr_true = 0;
 	for (int i = 0; i < job_per_proc; i++) {
-		if (halt_jobs) {
-			return;
-		}
 		if (nr_true >= 100) {
 			return; // ** Stop computation immediatly after reaching 100 trues
 		}
@@ -148,12 +147,10 @@ void parallel_work(int nr_procs, int proc_id, char* work_type) {
 	if (proc_id == ROOT) { 			
 		double time_root = -MPI_Wtime(); // This command helps us measure time. 
 		int total_nr_true = 0; 
-		int i = 0;
 		while (total_nr_true < 100 && i < job_per_proc) {
 			int curr_true = 0;
 			// Computation that the root process does
 			int result = test(sub_arr[i]);
-			i++;
 			if (result) {
 				curr_true++;
 				if (total_nr_true >= 100) {
@@ -163,11 +160,11 @@ void parallel_work(int nr_procs, int proc_id, char* work_type) {
 			// Check if there is a message from another process to update the nr_trues.
 			int flag = 0;
 			MPI_Status status;
-			MPI_Iprobe(MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD, &flag, &status); // ** Implicit recieving
-			// If there is a message from any process, we know it's a true with the quantity of 1.
+			MPI_Iprobe(MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD, &flag, &status); // ** Implicit recieving, check for pending message, don't wait for it then it will increase the time
+			// Non-blocking recv
 			while (flag) {
 				int other_true = 0;
-				MPI_Recv(&other_true, 1, MPI_INT, MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+				MPI_Recv(&other_true, 1, MPI_INT, MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD, MPI_STATUS_IGNORE); // blocking recv parameter
 				total_nr_true = curr_true + other_true;
 				if (total_nr_true >= 100) { // If we always recieve a message and can't get out of this loop, we return ASAP
 					break;
@@ -175,16 +172,16 @@ void parallel_work(int nr_procs, int proc_id, char* work_type) {
 				MPI_Iprobe(MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD, &flag, &status); // check for more updates
 			}
 		}
-		halt_jobs = 1;
 		time_root += MPI_Wtime(); // This command helps us measure time. 
 		printf("Process %d finished the job in %f seconds\n", proc_id, time_root); 
+		MPI_Finalize(); // Finalize MPI env  	
 		return;
 	}
 	else { 
-		double time = -MPI_Wtime(); // This command helps us measure time. 
+		// double time = -MPI_Wtime(); // This command helps us measure time. 
 		do_job(job_per_proc, sub_arr);
-		time += MPI_Wtime();
-		printf("Process %d finished the job in %f seconds\n", proc_id, time);
+		// time += MPI_Wtime();
+		// printf("Process %d finished the job in %f seconds\n", proc_id, time);
 		return;
 	}
 }
@@ -212,8 +209,10 @@ int main(int argc, char *argv[]) {
 		}
 	} else { // Sequentail program 
 		printf("Testing sequential program with %s filling\n", arr_filling);
+		sequential(arr_filling);
+		MPI_Finalize(); // Finalize MPI env  	
 	}
 	
-	MPI_Finalize(); // Finalize MPI env  	
+	
 	return 0;
 }
