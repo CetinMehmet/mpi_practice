@@ -128,8 +128,6 @@ void do_job(int job_per_proc, int *sub_arr) {
 	- Root machine uses async non-blocking send 
 */
 void parallel_work(int nr_procs, int proc_id, char* work_type) {
-
-	printf("Parallel program for processor %d has started!\n", proc_id);
 	int job_per_proc = (N / (nr_procs));
 	int *sub_arr = allocate_mem(job_per_proc);
 	int *arr = NULL; 
@@ -206,15 +204,25 @@ int main(int argc, char *argv[]) {
 
 	printf("Ascending parallel work started!\n");
 	parallel_work(nr_procs, proc_id, "asc");
+	if (proc_id == ROOT) {
+		printf("End of program!\n\n");
+	}
 
 	printf("Random parallel work started!\n");
 	parallel_work(nr_procs, proc_id, "rand");
+	if (proc_id == ROOT) {
+		printf("End of program!\n\n");
+	}
 
-	printf("Ascending Sequential work started!\n");
-	sequential("asc");
+	if (proc_id == ROOT) { // We only want one proc to work on the sequential version
+		printf("Ascending Sequential work started!\n");
+		sequential("asc");
+		printf("End of program!\n\n");
 
-	printf("Random Sequential work started!\n");
-	sequential("rand");
-
+		printf("Random Sequential work started!\n");
+		sequential("rand");
+		printf("End of program!\n\n");
+	}
+	
 	MPI_Finalize(); // Finalize MPI env  	
 }
