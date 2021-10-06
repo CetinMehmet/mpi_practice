@@ -3,8 +3,9 @@
 #include <stdio.h>
 #include <time.h>
 #include <math.h>
-#include "mpi.h"
 #include <string.h>
+#include "mpi.h"
+
 
 #define ROOT 0
 #define TAG_ARR_DATA 0
