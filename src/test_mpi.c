@@ -148,10 +148,11 @@ void parallel_work(int nr_procs, int proc_id, char* work_type) {
 	if (proc_id == ROOT) { 			
 		double time_root = -MPI_Wtime(); // This command helps us measure time. 
 		int total_nr_true = 0; 
+		int i = 0;
 		while (total_nr_true < 100 && i < job_per_proc) {
 			int curr_true = 0;
 			// Computation that the root process does
-			int result = test(sub_arr[i]);
+			int result = test(sub_arr[i]); i++;
 			if (result) {
 				curr_true++;
 				if (total_nr_true >= 100) {
