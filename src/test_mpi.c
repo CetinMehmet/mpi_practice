@@ -191,6 +191,10 @@ void parallel_work(int nr_procs, int proc_id, char* work_type) {
 
 
 int main(int argc, char *argv[]) {
+	if (argc != 2) {
+		fprintf(stderr, "An argument of asc or rand must be given\n"); exit(1);
+	} 
+	char *arr_filling = argv[1]; // rand or asc
 	// Initialize MPI env
 	MPI_Init(&argc, &argv); 						
 	int nr_procs = 0;
@@ -198,31 +202,18 @@ int main(int argc, char *argv[]) {
 	MPI_Comm_size(MPI_COMM_WORLD, &nr_procs); 		// Get number of processors we are gonna use for the job
     MPI_Comm_rank(MPI_COMM_WORLD, &proc_id); 		// Get rank (id) of processors
 	
-	if (proc_id == ROOT) {
-		printf("Testing program with %d processors\n", nr_procs);
-	}
-
-	printf("Ascending parallel work started!\n");
-	parallel_work(nr_procs, proc_id, "asc");
-	if (proc_id == ROOT) {
-		printf("End of program!\n\n");
-	}
-
-	printf("Random parallel work started!\n");
-	parallel_work(nr_procs, proc_id, "rand");
-	if (proc_id == ROOT) {
-		printf("End of program!\n\n");
-	}
-
-	if (proc_id == ROOT) { // We only want one proc to work on the sequential version
-		printf("Ascending Sequential work started!\n");
-		sequential("asc");
-		printf("End of program!\n\n");
-
-		printf("Random Sequential work started!\n");
-		sequential("rand");
-		printf("End of program!\n\n");
+	if (nr_procs > 1) {
+		if (proc_id == ROOT) {
+			printf("Testing parallel program with %d processors and %s filling\n", nr_procs, arr_filling);
+		}
+		parallel_work(nr_procs, proc_id, arr_filling);
+		if (proc_id == ROOT) {
+			printf("End of program!\n\n");
+		}
+	} else { // Sequentail program 
+		printf("Testing sequential program with %s filling\n", arr_filling);
 	}
 	
 	MPI_Finalize(); // Finalize MPI env  	
+	return 0;
 }
