@@ -68,9 +68,7 @@ void fill_ascending(int *A, int N) {
 }
 
 void sequential(char *work_type) {
-	printf("Sequential program has started!\n");
-
-	arr = allocate_mem(N);
+	int *arr = allocate_mem(N);
 	if (strcmp(work_type, "asc") == 0) {
 		fill_ascending(arr, N); 	
 	} else if (strcmp(work_type, "rand")) {
@@ -80,16 +78,19 @@ void sequential(char *work_type) {
 	}
 	
 	int nr_true = 0;
-	double time_root = -MPI_Wtime(); // This command helps us measure time. 
+	double time = -MPI_Wtime(); // This command helps us measure time. 
 	for (int i = 0; i < N; i++) {
 		int result = test(arr[i]);
 		if (result) {
 			nr_true++;
 		}
+		if (nr_true >= 100) {
+			break; 
+		}
 	}
 
-  	time_root += MPI_Wtime();
-  	printf("Time spent (seconds) for the sequential version: %f\n", time_spent);
+  	time += MPI_Wtime();
+  	printf("Time spent for the sequential version: %f\n", time);
 }
 
 /* Might be required in the future for point-to-point work distribution
@@ -199,7 +200,17 @@ int main(int argc, char *argv[]) {
 	MPI_Comm_size(MPI_COMM_WORLD, &nr_procs); 		// Get number of processors we are gonna use for the job
     MPI_Comm_rank(MPI_COMM_WORLD, &proc_id); 		// Get rank (id) of processors
 	
+	printf("Ascending parallel work started!\n");
 	parallel_work(nr_procs, proc_id, "asc");
-	
+
+	printf("Random parallel work started!\n");
+	parallel_work(nr_procs, proc_id, "rand");
+
+	printf("Ascending Sequential work started!\n");
+	sequential("asc");
+
+	printf("Random Sequential work started!\n");
+	sequential("rand");
+
 	MPI_Finalize(); // Finalize MPI env  	
 }
