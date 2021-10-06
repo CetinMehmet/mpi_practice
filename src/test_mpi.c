@@ -71,7 +71,7 @@ void sequential(char *work_type) {
 	int *arr = allocate_mem(N);
 	if (strcmp(work_type, "asc") == 0) {
 		fill_ascending(arr, N); 	
-	} else if (strcmp(work_type, "rand")) {
+	} else if (strcmp(work_type, "rand") == 0) {
 		fill_random(arr, N);
 	} else {
 		printf("Wrong filling for the array.\n"); exit(1);
@@ -138,7 +138,7 @@ void parallel_work(int nr_procs, int proc_id, char* work_type) {
 		arr = allocate_mem(N);
 		if (strcmp(work_type, "asc") == 0) {
 			fill_ascending(arr, N); 	
-		} else if (strcmp(work_type, "rand")) {
+		} else if (strcmp(work_type, "rand") == 0) {
 			fill_random(arr, N);
 		} else {
 			printf("Wrong filling for the array.\n"); exit(1);
@@ -200,6 +200,10 @@ int main(int argc, char *argv[]) {
 	MPI_Comm_size(MPI_COMM_WORLD, &nr_procs); 		// Get number of processors we are gonna use for the job
     MPI_Comm_rank(MPI_COMM_WORLD, &proc_id); 		// Get rank (id) of processors
 	
+	if (proc_id == ROOT) {
+		printf("Testing program with %d processors\n", nr_procs);
+	}
+
 	printf("Ascending parallel work started!\n");
 	parallel_work(nr_procs, proc_id, "asc");
 
