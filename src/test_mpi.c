@@ -96,20 +96,11 @@ void sequential(char *work_type) {
   	printf("Time spent for the sequential version: %f\n", time);
 }
 
-/* Might be required in the future for point-to-point work distribution
-void get_subset(int *arr, int* sub_arr, int startPoint, int jobs_per_proc) {
-	int j = 0;
-	for(int i = startPoint; i < (startPoint + jobs_per_proc); i++) {
-		sub_arr[j] = arr[i];
-		j++;
-	}
-}
-*/
 
-void do_job(int job_per_proc, int *sub_arr) {
+void do_job(int job_per_proc, int *sub_arr, int *halt_job) {
 	int nr_true = 0;
 	for (int i = 0; i < job_per_proc; i++) {
-		if (halt_job) {
+		if ((*halt_job) == 1) {
 			return;
 		}
 		if (nr_true >= 100) {
@@ -123,6 +114,7 @@ void do_job(int job_per_proc, int *sub_arr) {
 		}
 	}
 }
+
 
 /*
 	- To reduce the communication overhead, we will reserve (N / nr_procs) job per processor
@@ -186,21 +178,7 @@ void parallel_work(int nr_procs, int proc_id, char* work_type) {
 	}
 	else { 
 		double time = -MPI_Wtime(); // This command helps us measure time. 
-		int nr_true = 0;
-		for (int i = 0; i < job_per_proc; i++) {
-			if (halt_job) {
-				return;
-			}
-			if (nr_true >= 100) {
-				return; // ** Stop computation immediatly after reaching 100 trues
-			}
-
-			int result = test(sub_arr[i]);
-			if (result) {
-				nr_true++;
-				MPI_Send(&nr_true, 1, MPI_INT, ROOT, TAG_NR_TRUES, MPI_COMM_WORLD);  
-			}
-		}
+		do_job(job_per_proc, nr_procs, &halt_job);
 		time += MPI_Wtime();
 		printf("Process %d finished the job in %f seconds\n", proc_id, time);
 		return;
