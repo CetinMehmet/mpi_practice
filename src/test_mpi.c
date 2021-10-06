@@ -180,10 +180,11 @@ void parallel_work(int nr_procs, int proc_id, char* work_type) {
 		return;
 	}
 	else { 
-		// double time = -MPI_Wtime(); // This command helps us measure time. 
+		double time = -MPI_Wtime(); // This command helps us measure time. 
 		do_job(job_per_proc, sub_arr);
-		// time += MPI_Wtime();
-		// printf("Process %d finished the job in %f seconds\n", proc_id, time);
+		time += MPI_Wtime();
+		printf("Process %d finished the job in %f seconds\n", proc_id, time);
+		MPI_Finalize(); // Finalize MPI env  	
 		return;
 	}
 }
