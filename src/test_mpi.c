@@ -25,7 +25,7 @@ int test(int x) {
 		xd = asin(xd);
 	}
 
-	// between sin(210) and sin(330) is below -0.5
+	// between sin(210) and sin(330) is below -0.5, which is also equal to sin(7/4 * M_PI) and sin(11/6 * M_PI)
 	// In trigonometer, if xd is over 2 M_PI, we subtract till xd is below 2 M_PI 
 	xd = sin(xd); 
 	
@@ -60,7 +60,7 @@ int *allocate_mem(int N) {
 void fill_random(int *A, int N) {
 	srand(time(0));
 	for (int i = 0; i < N; i++) {
-		A[i] = (rand() % N);
+		A[i] = (rand() % N); // Each value is between 0 and 500
 	}
 }
 
@@ -109,6 +109,9 @@ void get_subset(int *arr, int* sub_arr, int startPoint, int jobs_per_proc) {
 void do_job(int job_per_proc, int *sub_arr) {
 	int nr_true = 0;
 	for (int i = 0; i < job_per_proc; i++) {
+		if (halt_job) {
+			return;
+		}
 		if (nr_true >= 100) {
 			return; // ** Stop computation immediatly after reaching 100 trues
 		}
@@ -131,6 +134,7 @@ void parallel_work(int nr_procs, int proc_id, char* work_type) {
 	int job_per_proc = (N / (nr_procs));
 	int *sub_arr = allocate_mem(job_per_proc);
 	int *arr = NULL; 
+	int halt_job = 0;
 
 	if (proc_id == ROOT) { 			// Root machine distributes work
 		arr = allocate_mem(N);
@@ -176,15 +180,29 @@ void parallel_work(int nr_procs, int proc_id, char* work_type) {
 		}
 		time_root += MPI_Wtime(); // This command helps us measure time. 
 		printf("Process %d finished the job in %f seconds\n", proc_id, time_root); 
-		MPI_Finalize(); // Finalize MPI env  	
+		halt_job = 1;
+		MPI_Bcast(&halt_job, 1, MPI_INT, ROOT, MPI_COMM_WORLD);
 		return;
 	}
 	else { 
 		double time = -MPI_Wtime(); // This command helps us measure time. 
-		do_job(job_per_proc, sub_arr);
+		int nr_true = 0;
+		for (int i = 0; i < job_per_proc; i++) {
+			if (halt_job) {
+				return;
+			}
+			if (nr_true >= 100) {
+				return; // ** Stop computation immediatly after reaching 100 trues
+			}
+
+			int result = test(sub_arr[i]);
+			if (result) {
+				nr_true++;
+				MPI_Send(&nr_true, 1, MPI_INT, ROOT, TAG_NR_TRUES, MPI_COMM_WORLD);  
+			}
+		}
 		time += MPI_Wtime();
 		printf("Process %d finished the job in %f seconds\n", proc_id, time);
-		MPI_Finalize(); // Finalize MPI env  	
 		return;
 	}
 }
@@ -210,6 +228,7 @@ int main(int argc, char *argv[]) {
 		if (proc_id == ROOT) {
 			printf("End of program!\n\n");
 		}
+		MPI_Finalize(); // Finalize MPI env  	
 	} else { // Sequentail program 
 		printf("Testing sequential program with %s filling\n", arr_filling);
 		sequential(arr_filling);
