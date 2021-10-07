@@ -70,7 +70,7 @@ void fill_ascending(int *A, int N) {
   }
 }
 
-void sequential(char *work_type) {
+void sequential(char *work_type, FILE *fp) {
 	int *arr = allocate_mem(N);
 	if (strcmp(work_type, "asc") == 0) {
 		fill_ascending(arr, N); 	
@@ -200,7 +200,11 @@ int main(int argc, char *argv[]) {
     MPI_Comm_rank(MPI_COMM_WORLD, &proc_id); 		// Get rank (id) of processors
 	
 	FILE *fp = NULL;
-	fp = fopen(file_name, "w+");
+	fp = fopen(file_name, "a");
+	if (fp == NULL) {
+		fprintf(stdout, "Creating file %s\n", file_name);
+		fp = fopen(file_name, "w+");
+	}
 
 	if (nr_procs > 1) {
 		if (proc_id == ROOT) {
