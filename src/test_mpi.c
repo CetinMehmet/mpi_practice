@@ -93,7 +93,7 @@ void sequential(char *work_type) {
 	}
 
   	time += MPI_Wtime();
-  	printf("Time spent for the sequential version: %f\n", time);
+  	fprintf(fp, "Time spent for the sequential version: %f\n", time);
 }
 
 
@@ -122,7 +122,7 @@ void do_job(int job_per_proc, int *sub_arr, int *halt_job) {
 	so that all processes can terminate as fast as possible (When nr_trues >= 100). 
 	- Root machine uses async non-blocking send 
 */
-void parallel_work(int nr_procs, int proc_id, char* work_type) {
+void parallel_work(int nr_procs, int proc_id, char* work_type, FILE *fp) {
 	int job_per_proc = (N / (nr_procs));
 	int *sub_arr = allocate_mem(job_per_proc);
 	int *arr = NULL; 
@@ -171,7 +171,7 @@ void parallel_work(int nr_procs, int proc_id, char* work_type) {
 			}
 		}
 		time_root += MPI_Wtime(); // This command helps us measure time. 
-		printf("Process %d finished the job in %f seconds\n", proc_id, time_root); 
+		fprintf(fp, "Process %d finished the job in %f seconds\n", proc_id, time_root); 
 		halt_job = 1;
 		MPI_Bcast(&halt_job, 1, MPI_INT, ROOT, MPI_COMM_WORLD);
 		return;
@@ -180,17 +180,18 @@ void parallel_work(int nr_procs, int proc_id, char* work_type) {
 		double time = -MPI_Wtime(); // This command helps us measure time. 
 		do_job(job_per_proc, sub_arr, &halt_job);
 		time += MPI_Wtime();
-		printf("Process %d finished the job in %f seconds\n", proc_id, time);
+		fprintf(fp, "Process %d finished the job in %f seconds\n", proc_id, time);
 		return;
 	}
 }
 
 
 int main(int argc, char *argv[]) {
-	if (argc != 2) {
-		fprintf(stderr, "An argument of asc or rand must be given\n"); exit(1);
+	if (argc != 3) {
+		fprintf(stderr, "An argument of asc or rand, and a file name for the output to be written must be given\n"); exit(1);
 	} 
 	char *arr_filling = argv[1]; // rand or asc
+	char *file_name = argv[2]; // file_name.txt
 	// Initialize MPI env
 	MPI_Init(&argc, &argv); 						
 	int nr_procs = 0;
@@ -198,21 +199,24 @@ int main(int argc, char *argv[]) {
 	MPI_Comm_size(MPI_COMM_WORLD, &nr_procs); 		// Get number of processors we are gonna use for the job
     MPI_Comm_rank(MPI_COMM_WORLD, &proc_id); 		// Get rank (id) of processors
 	
+	FILE *fp = NULL;
+	fp = fopen(file_name, "w+");
+
 	if (nr_procs > 1) {
 		if (proc_id == ROOT) {
-			printf("Testing parallel program with %d processors and %s filling\n", nr_procs, arr_filling);
+			fprintf(fp, "Testing parallel program with %d processors and %s filling\n", nr_procs, arr_filling);
 		}
-		parallel_work(nr_procs, proc_id, arr_filling);
+		parallel_work(nr_procs, proc_id, arr_filling, fp);
 		if (proc_id == ROOT) {
-			printf("End of program!\n\n");
-		}
-		MPI_Finalize(); // Finalize MPI env  	
+			fprintf(fp, "End of program!\n\n");
+		}	
 	} else { // Sequentail program 
-		printf("Testing sequential program with %s filling\n", arr_filling);
-		sequential(arr_filling);
-		MPI_Finalize(); // Finalize MPI env  	
+		fprintf(fp, "Testing sequential program with %s filling\n", arr_filling);
+		sequential(arr_filling, fp);
 	}
-	
+
+	fclose(fp);
+	MPI_Finalize(); 
 	
 	return 0;
 }
