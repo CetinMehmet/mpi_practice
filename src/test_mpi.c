@@ -135,7 +135,7 @@ void parallel_work(int nr_procs, int proc_id, char* work_type, FILE *fp) {
 		} else if (strcmp(work_type, "rand") == 0) {
 			fill_random(arr, N);
 		} else {
-			printf("Wrong filling for the array.\n"); exit(1);
+			fprintf(stderr, "Wrong filling for the array.\n"); exit(1);
 		}
 	}
 	// Scatter the random numbers from the root process to all processes in the MPI world
@@ -202,19 +202,13 @@ int main(int argc, char *argv[]) {
 	FILE *fp = NULL;
 	fp = fopen(file_name, "a");
 	if (fp == NULL) {
-		fprintf(stdout, "Creating file %s\n", file_name);
+		fprintf("Creating file %s\n", file_name);
 		fp = fopen(file_name, "w+");
 	}
 
 	if (nr_procs > 1) {
-		if (proc_id == ROOT) {
-			fprintf(fp, "Testing parallel program with %d processors and %s filling\n", nr_procs, arr_filling);
-		}
 		parallel_work(nr_procs, proc_id, arr_filling, fp);
-		if (proc_id == ROOT) {
-			fprintf(fp, "End of program!\n\n");
-		}	
-	} else { // Sequentail program 
+	} else { // sequential program 
 		fprintf(fp, "Testing sequential program with %s filling\n", arr_filling);
 		sequential(arr_filling, fp);
 	}
