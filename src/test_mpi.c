@@ -96,32 +96,6 @@ void sequential(char *work_type, FILE *fp) {
 }
 
 
-void do_job(int job_per_proc, int *sub_arr) {
-	int total_nr_true = 0;
-	int halt_job = 0;
-	for (int i = 0; i < job_per_proc; i++) {
-		
-		int flag = 0;
-		MPI_Status status;
-		MPI_Iprobe(ROOT, TAG_HALT_JOB, MPI_COMM_WORLD, &flag, &status); // ** Implicit recieving, check for pending message, don't wait for it then it will increase the time
-		// Non-blocking recv
-		while (flag) {
-			MPI_Recv(&halt_job, 1, MPI_INT, ROOT, TAG_HALT_JOB, MPI_COMM_WORLD, MPI_STATUS_IGNORE); // blocking recv parameter
-			if (halt_job) return;
-			MPI_Iprobe(ROOT, TAG_HALT_JOB, MPI_COMM_WORLD, &flag, &status); // check for more updates
-		}
-
-		int result = test(sub_arr[i]);
-		if (result) {
-			total_nr_true++;
-			int nr_true = 1;
-			MPI_Send(&nr_true, 1, MPI_INT, ROOT, TAG_NR_TRUES, MPI_COMM_WORLD);  
-			if (total_nr_true >= 100) return;
-		}
-	}
-}
-
-
 /*
 	- To reduce the communication overhead, we will reserve (N / nr_procs) job per processor
 	- Make sure that the program keeps track of how many successful elements (number of trues) all processes have found together, 
@@ -132,7 +106,7 @@ void parallel_work(int nr_procs, int proc_id, char* work_type, FILE *fp) {
 	int job_per_proc = (N / (nr_procs));
 	int *sub_arr = allocate_mem(job_per_proc);
 	int *arr = NULL; 
-	int halt_job = 1;
+	int total_nr_true = 0;
 
 	if (proc_id == ROOT) { 			// Root machine distributes work
 		arr = allocate_mem(N);
@@ -146,43 +120,18 @@ void parallel_work(int nr_procs, int proc_id, char* work_type, FILE *fp) {
 	}
 	// Scatter the random numbers from the root process to all processes in the MPI world
   	MPI_Scatter(arr, job_per_proc, MPI_INT, sub_arr, job_per_proc, MPI_INT, ROOT, MPI_COMM_WORLD);
-
+	
 	double time = -MPI_Wtime(); // This command helps us measure time. 
-	if (proc_id == ROOT) { 					
-		int total_nr_true = 0; 
-		int i = 0;
-		while (total_nr_true < 100 && i < job_per_proc) {
-			// Computation that the root process does
-			int result = test(sub_arr[i]); i++;
-			if (result) {
-				total_nr_true++;
-				if (total_nr_true >= 100) {
-					for (int id = 1; id < nr_procs; id++) {
-						MPI_Send(&halt_job, 1, MPI_INT, id, TAG_HALT_JOB, MPI_COMM_WORLD);
-					}
-				}
-			}
-			// Check if there is a message from another process to update the nr_trues.
-			int flag = 0;
-			MPI_Status status;
-			MPI_Iprobe(MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD, &flag, &status); // ** Implicit recieving, check for pending message, don't wait for it then it will increase the time
-			// Non-blocking recv
-			while (flag) {
-				int other_true = 0;
-				MPI_Recv(&other_true, 1, MPI_INT, MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD, MPI_STATUS_IGNORE); 
-				total_nr_true++;
-				if (total_nr_true >= 100) { // If we always recieve a message and can't get out of this loop, we return ASAP
-					for (int id = 1; id < nr_procs; id++) {
-						MPI_Send(&halt_job, 1, MPI_INT, id, TAG_HALT_JOB, MPI_COMM_WORLD);
-					}
-				}
-				MPI_Iprobe(MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD, &flag, &status); // check for more updates
-			}
+	for (int i = 0; i < job_per_proc; i++) {
+		int result = test(sub_arr[i]);
+		if (result) {
+			total_nr_true++;
 		}
+		MPI_Wait(MPI_COMM_WORLD); // All procs do same amount of work, thus implementing a barrier won't reduce performance that much
+		MPI_Bcast(&total_nr_true, 1, MPI_INT, ROOT, MPI_COMM_WORLD);
+		if (total_nr_true >= 100) break;
 	}
-	else { 
-		do_job(job_per_proc, sub_arr);
-	}
+	
 	time += MPI_Wtime();
 	fprintf(fp, "Process %d finished the job in %f seconds\n", proc_id, time);
 }
