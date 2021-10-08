@@ -97,12 +97,9 @@ void sequential(char *work_type, FILE *fp) {
 }
 
 
-void do_job(int job_per_proc, int *sub_arr, int *halt_job) {
+void do_job(int job_per_proc, int *sub_arr) {
 	int nr_true = 0;
 	for (int i = 0; i < job_per_proc; i++) {
-		if ((*halt_job) == 1) {
-			return;
-		}
 		if (nr_true >= 100) {
 			return; // ** Stop computation immediatly after reaching 100 trues
 		}
@@ -111,6 +108,19 @@ void do_job(int job_per_proc, int *sub_arr, int *halt_job) {
 		if (result) {
 			nr_true++;
 			MPI_Send(&nr_true, 1, MPI_INT, ROOT, TAG_NR_TRUES, MPI_COMM_WORLD);  
+		}
+		// Check if there is a message from another process to update the nr_trues.
+		int flag = 0;
+		MPI_Status status;
+		MPI_Iprobe(ROOT, TAG_NR_TRUES, MPI_COMM_WORLD, &flag, &status); // ** Implicit recieving, check for pending message, don't wait for it then it will increase the time
+		// Non-blocking recv
+		while (flag) {
+			int total_nr_true = 0;
+			MPI_Recv(&total_nr_true, 1, MPI_INT, ROOT, TAG_NR_TRUES, MPI_COMM_WORLD, MPI_STATUS_IGNORE); // blocking recv parameter
+			if (total_nr_true >= 100) { // If we always recieve a message and can't get out of this loop, we return ASAP
+				return;
+			}
+			MPI_Iprobe(MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD, &flag, &status); // check for more updates
 		}
 	}
 }
@@ -126,7 +136,6 @@ void parallel_work(int nr_procs, int proc_id, char* work_type, FILE *fp) {
 	int job_per_proc = (N / (nr_procs));
 	int *sub_arr = allocate_mem(job_per_proc);
 	int *arr = NULL; 
-	int halt_job = 0;
 
 	if (proc_id == ROOT) { 			// Root machine distributes work
 		arr = allocate_mem(N);
@@ -165,6 +174,9 @@ void parallel_work(int nr_procs, int proc_id, char* work_type, FILE *fp) {
 				MPI_Recv(&other_true, 1, MPI_INT, MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD, MPI_STATUS_IGNORE); // blocking recv parameter
 				total_nr_true = curr_true + other_true;
 				if (total_nr_true >= 100) { // If we always recieve a message and can't get out of this loop, we return ASAP
+					for (int id = 1; id < nr_procs; id++) {
+						MPI_Send(&total_nr_true, 1, MPI_INT, id, TAG_NR_TRUES, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+					}
 					break;
 				}
 				MPI_Iprobe(MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD, &flag, &status); // check for more updates
@@ -172,13 +184,11 @@ void parallel_work(int nr_procs, int proc_id, char* work_type, FILE *fp) {
 		}
 		time_root += MPI_Wtime(); // This command helps us measure time. 
 		fprintf(fp, "Process %d finished the job in %f seconds\n", proc_id, time_root); 
-		halt_job = 1;
-		MPI_Bcast(&halt_job, 1, MPI_INT, ROOT, MPI_COMM_WORLD);
 		return;
 	}
 	else { 
 		double time = -MPI_Wtime(); // This command helps us measure time. 
-		do_job(job_per_proc, sub_arr, &halt_job);
+		do_job(job_per_proc, sub_arr);
 		time += MPI_Wtime();
 		fprintf(fp, "Process %d finished the job in %f seconds\n", proc_id, time);
 		return;
@@ -202,7 +212,7 @@ int main(int argc, char *argv[]) {
 	FILE *fp = NULL;
 	fp = fopen(file_name, "a");
 	if (fp == NULL) {
-		fprintf("Creating file %s\n", file_name);
+		printf("Creating file %s\n", file_name);
 		fp = fopen(file_name, "w+");
 	}
 
