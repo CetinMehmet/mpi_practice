@@ -106,7 +106,7 @@ void parallel_work(int nr_procs, int proc_id, char* work_type, FILE *fp) {
 	int job_per_proc = (N / (nr_procs));
 	int *sub_arr = allocate_mem(job_per_proc);
 	int *arr = NULL; 
-	int total_nr_true = 0;
+	int global_nr_true = 0;
 
 	if (proc_id == ROOT) { 			// Root machine distributes work
 		arr = allocate_mem(N);
@@ -122,14 +122,13 @@ void parallel_work(int nr_procs, int proc_id, char* work_type, FILE *fp) {
   	MPI_Scatter(arr, job_per_proc, MPI_INT, sub_arr, job_per_proc, MPI_INT, ROOT, MPI_COMM_WORLD);
 	
 	double time = -MPI_Wtime(); // This command helps us measure time. 
+	int local_nr_true = 0;
 	for (int i = 0; i < job_per_proc; i++) {
 		int result = test(sub_arr[i]);
-		if (result) {
-			total_nr_true++;
-		}
-		MPI_Barrier(MPI_COMM_WORLD); // All procs do same amount of work, thus implementing a barrier won't reduce performance that much
-		MPI_Bcast(&total_nr_true, 1, MPI_INT, ROOT, MPI_COMM_WORLD);
-		if (total_nr_true >= 100) break;
+		if (result) local_nr_true++;
+		MPI_Reduce(&local_nr_true, &global_nr_true, 1, MPI_INT, MPI_SUM, ROOT, MPI_COMM_WORLD);
+		// MPI_Barrier(MPI_COMM_WORLD); // All procs do same amount of work, thus implementing a barrier won't reduce performance that much
+		if (global_nr_true >= 100) break;
 	}
 	
 	time += MPI_Wtime();
