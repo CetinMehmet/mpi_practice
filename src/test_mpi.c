@@ -166,7 +166,9 @@ void parallel_work(int nr_procs, int proc_id, char* work_type, FILE *fp) {
 			// Non-blocking recv
 			while (flag) {
 				int other_true = 0;
-				MPI_Irecv(&other_true, 1, MPI_INT, MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD); // blocking recv parameter
+				MPI_Request req;
+				MPI_Irecv(&other_true, 1, MPI_INT, MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD, &req); // blocking recv parameter
+				MPI_Request_free(&req);
 				total_nr_true += 1;
 				if (total_nr_true >= 100) { // If we always recieve a message and can't get out of this loop, we return ASAP
 					for (int id = 1; id < nr_procs; id++) {
