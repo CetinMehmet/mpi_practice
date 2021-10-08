@@ -111,11 +111,6 @@ void do_job(int job_per_proc, int *sub_arr, int proc_id) {
 			}
 			MPI_Iprobe(MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD, &flag, &status); // check for more updates
 		}
-
-		if (total_nr_true >= 100) {
-			return; // ** Stop computation immediatly after reaching 100 trues
-		}
-
 		int result = test(sub_arr[i]);
 		if (result) {
 			nr_true++;
