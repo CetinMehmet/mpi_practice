@@ -127,7 +127,7 @@ void parallel_work(int nr_procs, int proc_id, char* work_type, FILE *fp) {
 		if (result) {
 			total_nr_true++;
 		}
-		MPI_Wait(MPI_COMM_WORLD); // All procs do same amount of work, thus implementing a barrier won't reduce performance that much
+		MPI_Barrier(MPI_COMM_WORLD); // All procs do same amount of work, thus implementing a barrier won't reduce performance that much
 		MPI_Bcast(&total_nr_true, 1, MPI_INT, ROOT, MPI_COMM_WORLD);
 		if (total_nr_true >= 100) break;
 	}
