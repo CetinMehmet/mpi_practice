@@ -112,7 +112,7 @@ void do_job(int job_per_proc, int *sub_arr, int proc_id) {
 			MPI_Iprobe(MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD, &flag, &status); // check for more updates
 		}
 
-		if (nr_true >= 100) {
+		if (total_nr_true >= 100) {
 			return; // ** Stop computation immediatly after reaching 100 trues
 		}
 
@@ -172,12 +172,10 @@ void parallel_work(int nr_procs, int proc_id, char* work_type, FILE *fp) {
 				int other_true = 0;
 				MPI_Recv(&other_true, 1, MPI_INT, MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD, MPI_STATUS_IGNORE); // blocking recv parameter
 				total_nr_true += 1;
-				printf("Total nr trues: %d\n", total_nr_true);
 				if (total_nr_true >= 100) { // If we always recieve a message and can't get out of this loop, we return ASAP
 					for (int id = 1; id < nr_procs; id++) {
 						MPI_Send(&total_nr_true, 1, MPI_INT, id, TAG_NR_TRUES, MPI_COMM_WORLD);
 					}
-					break;
 				}
 				MPI_Iprobe(MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD, &flag, &status); // check for more updates
 			}
