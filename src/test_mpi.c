@@ -102,7 +102,7 @@ void sequential(char *work_type, FILE *fp) {
 	so that all processes can terminate as fast as possible (When nr_trues >= 100). 
 	- Root machine uses async non-blocking send 
 */
-void parallel_work(int nr_procs, int proc_id, char* work_type, FILE *fp) {
+void fixed_parallel_work(int nr_procs, int proc_id, char* work_type, FILE *fp) {
 	int job_per_proc = (N / (nr_procs));
 	int *sub_arr = allocate_mem(job_per_proc);
 	int *arr = NULL; 
@@ -127,11 +127,12 @@ void parallel_work(int nr_procs, int proc_id, char* work_type, FILE *fp) {
 		int result = test(sub_arr[i]);
 		if (result) local_nr_true++;
 		MPI_Allreduce(&local_nr_true, &global_nr_true, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-		if (global_nr_true >= 100) break;
+		if (global_nr_true >= 100) {
+			time += MPI_Wtime();
+			fprintf(fp, "Process %d finished the job in %f seconds\n", proc_id, time);
+			return;
+		}
 	}
-	
-	time += MPI_Wtime();
-	fprintf(fp, "Process %d finished the job in %f seconds\n", proc_id, time);
 }
 
 
@@ -152,16 +153,13 @@ int main(int argc, char *argv[]) {
 	fp = fopen(file_name, "a");
 	if (fp == NULL) {
 		printf("Creating file %s\n", file_name);
-		fp = fopen(file_name, "w+");
+		fp = fopen(file_name, "w+"); 
 	}
 
-	if (nr_procs > 1) {
-		parallel_work(nr_procs, proc_id, arr_filling, fp);
+	if (proc_id % 2 == 0) fprintf(fp, "\n"); 
 
-	} else { // sequential program 
-		fprintf(fp, "Testing sequential program with %s filling\n", arr_filling);
-		sequential(arr_filling, fp);
-	}
+	if (nr_procs > 1) fixed_parallel_work(nr_procs, proc_id, arr_filling, fp);
+	else sequential(arr_filling, fp);
 
 	fclose(fp);
 	
