@@ -110,9 +110,10 @@ void do_job(int job_per_proc, int *sub_arr) {
 		}
 		int result = test(sub_arr[i]);
 		if (result) {
-			int total_nr_true++;
+			total_nr_true++;
 			if (total_nr_true >= 100) return;
 			MPI_Request req;
+			int nr_true = 1;
 			MPI_Isend(&nr_true, 1, MPI_INT, ROOT, TAG_NR_TRUES, MPI_COMM_WORLD, &req);  
 			MPI_Request_free(&req);
 		}
