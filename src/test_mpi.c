@@ -131,7 +131,8 @@ double fixed_parallel_work(int nr_procs, int proc_id, char* work_type, FILE *fp)
 		if (global_nr_true >= 100) break;
 	}
 	time += MPI_Wtime();
-	MPI_Reduce(&time, &global_time, 1, MPI_DOUBLE, ROOT, MPI_MAX, MPI_COMM_WORLD);
+	MPI_Barrier();
+	MPI_Reduce(&time, &global_time, 1, MPI_DOUBLE, MPI_MAX, ROOT, MPI_COMM_WORLD);
 	return global_time;
 }
 
