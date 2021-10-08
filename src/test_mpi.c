@@ -102,11 +102,12 @@ void sequential(char *work_type, FILE *fp) {
 	so that all processes can terminate as fast as possible (When nr_trues >= 100). 
 	- Root machine uses async non-blocking send 
 */
-void fixed_parallel_work(int nr_procs, int proc_id, char* work_type, FILE *fp) {
+double fixed_parallel_work(int nr_procs, int proc_id, char* work_type, FILE *fp) {
 	int job_per_proc = (N / (nr_procs));
 	int *sub_arr = allocate_mem(job_per_proc);
 	int *arr = NULL; 
 	int global_nr_true = 0;
+	double global_time = 0;
 
 	if (proc_id == ROOT) { 			// Root machine distributes work
 		arr = allocate_mem(N);
@@ -127,12 +128,11 @@ void fixed_parallel_work(int nr_procs, int proc_id, char* work_type, FILE *fp) {
 		int result = test(sub_arr[i]);
 		if (result) local_nr_true++;
 		MPI_Allreduce(&local_nr_true, &global_nr_true, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-		if (global_nr_true >= 100) {
-			time += MPI_Wtime();
-			fprintf(fp, "Process %d finished the job in %f seconds\n", proc_id, time);
-			return;
-		}
+		if (global_nr_true >= 100) break;
 	}
+	time += MPI_Wtime();
+	MPI_Reduce(&time, &global_time, 1, MPI_DOUBLE, ROOT, MPI_MAX, MPI_COMM_WORLD);
+	return global_time;
 }
 
 
@@ -156,9 +156,10 @@ int main(int argc, char *argv[]) {
 		fp = fopen(file_name, "w+"); 
 	}
 
-	if (proc_id == ROOT) fprintf(fp, "\n\n"); 
-
-	if (nr_procs > 1) fixed_parallel_work(nr_procs, proc_id, arr_filling, fp);
+	if (nr_procs > 1) {
+		double time = fixed_parallel_work(nr_procs, proc_id, arr_filling, fp);
+		if (proc_id == ROOT) fprintf(fp, "Time took to complete %s work with %d processors: %f\n", arr_filling, nr_procs, time);
+	}
 	else {
 		sequential(arr_filling, fp);
 		fprintf(fp, "\n"); 
