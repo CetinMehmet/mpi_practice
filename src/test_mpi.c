@@ -96,7 +96,7 @@ void sequential(char *work_type, FILE *fp) {
 
 
 void do_job(int job_per_proc, int *sub_arr) {
-	int nr_true = 0;
+	int total_nr_true = 0;
 	for (int i = 0; i < job_per_proc; i++) {
 		// Check if there is a message from another process to update the nr_trues.
 		int flag = 0;
@@ -104,14 +104,14 @@ void do_job(int job_per_proc, int *sub_arr) {
 		MPI_Iprobe(ROOT, TAG_NR_TRUES, MPI_COMM_WORLD, &flag, &status); // ** Implicit recieving, check for pending message, don't wait for it then it will increase the time
 		// Non-blocking recv
 		while (flag) {
-			int total_nr_true = 0;
 			MPI_Recv(&total_nr_true, 1, MPI_INT, ROOT, TAG_NR_TRUES, MPI_COMM_WORLD, MPI_STATUS_IGNORE); // blocking recv parameter
 			if (total_nr_true >= 100) return;
-			MPI_Iprobe(MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD, &flag, &status); // check for more updates
+			MPI_Iprobe(ROOT, TAG_NR_TRUES, MPI_COMM_WORLD, &flag, &status); // check for more updates
 		}
 		int result = test(sub_arr[i]);
 		if (result) {
-			nr_true++;
+			int total_nr_true++;
+			if (total_nr_true >= 100) return;
 			MPI_Request req;
 			MPI_Isend(&nr_true, 1, MPI_INT, ROOT, TAG_NR_TRUES, MPI_COMM_WORLD, &req);  
 			MPI_Request_free(&req);
@@ -167,9 +167,9 @@ void parallel_work(int nr_procs, int proc_id, char* work_type, FILE *fp) {
 			while (flag) {
 				int other_true = 0;
 				MPI_Request req;
-				MPI_Irecv(&other_true, 1, MPI_INT, MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD, &req); // blocking recv parameter
+				MPI_Irecv(&other_true, 1, MPI_INT, MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD, &req); 
 				MPI_Request_free(&req);
-				total_nr_true += 1;
+				total_nr_true++;
 				if (total_nr_true >= 100) { // If we always recieve a message and can't get out of this loop, we return ASAP
 					for (int id = 1; id < nr_procs; id++) {
 						MPI_Send(&total_nr_true, 1, MPI_INT, id, TAG_NR_TRUES, MPI_COMM_WORLD);
