@@ -98,6 +98,12 @@ void sequential(char *work_type, FILE *fp) {
 void do_job(int job_per_proc, int *sub_arr) {
 	int nr_true = 0;
 	for (int i = 0; i < job_per_proc; i++) {
+		int result = test(sub_arr[i]);
+		if (result) {
+			nr_true++;
+			MPI_Send(&nr_true, 1, MPI_INT, ROOT, TAG_NR_TRUES, MPI_COMM_WORLD);  
+		}
+
 		// Check if there is a message from another process to update the nr_trues.
 		int flag = 0;
 		MPI_Status status;
@@ -108,11 +114,6 @@ void do_job(int job_per_proc, int *sub_arr) {
 			MPI_Recv(&total_nr_true, 1, MPI_INT, ROOT, TAG_NR_TRUES, MPI_COMM_WORLD, MPI_STATUS_IGNORE); // blocking recv parameter
 			if (total_nr_true >= 100) return;
 			MPI_Iprobe(MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD, &flag, &status); // check for more updates
-		}
-		int result = test(sub_arr[i]);
-		if (result) {
-			nr_true++;
-			MPI_Send(&nr_true, 1, MPI_INT, ROOT, TAG_NR_TRUES, MPI_COMM_WORLD);  
 		}
 	}
 }
@@ -152,7 +153,9 @@ void parallel_work(int nr_procs, int proc_id, char* work_type, FILE *fp) {
 			if (result) {
 				total_nr_true++;
 				if (total_nr_true >= 100) {
-					break;
+					for (int id = 1; id < nr_procs; id++) {
+						MPI_Send(&total_nr_true, 1, MPI_INT, id, TAG_NR_TRUES, MPI_COMM_WORLD);
+					}
 				}
 			}
 			// Check if there is a message from another process to update the nr_trues.
