@@ -95,7 +95,7 @@ void sequential(char *work_type, FILE *fp) {
 }
 
 
-void do_job(int job_per_proc, int *sub_arr) {
+void do_job(int job_per_proc, int *sub_arr, int proc_id) {
 	int nr_true = 0;
 	for (int i = 0; i < job_per_proc; i++) {
 		// Check if there is a message from another process to update the nr_trues.
@@ -119,11 +119,10 @@ void do_job(int job_per_proc, int *sub_arr) {
 		int result = test(sub_arr[i]);
 		if (result) {
 			nr_true++;
-			printf("NR TRUES: %d in proc %d\n", proc_id);
 			MPI_Send(&nr_true, 1, MPI_INT, ROOT, TAG_NR_TRUES, MPI_COMM_WORLD);  
 		}
 	}
-	printf("Came to end of loop %d\n");
+	printf("Came to end of loop %d\n", proc_id);
 }
 
 
@@ -189,7 +188,7 @@ void parallel_work(int nr_procs, int proc_id, char* work_type, FILE *fp) {
 	}
 	else { 
 		double time = -MPI_Wtime(); // This command helps us measure time. 
-		do_job(job_per_proc, sub_arr);
+		do_job(job_per_proc, sub_arr, proc_id);
 		time += MPI_Wtime();
 		fprintf(fp, "Process %d finished the job in %f seconds\n", proc_id, time);
 		return;
