@@ -156,10 +156,13 @@ int main(int argc, char *argv[]) {
 		fp = fopen(file_name, "w+"); 
 	}
 
-	if (proc_id % 2 == 0) fprintf(fp, "\n"); 
+	if (proc_id == ROOT) fprintf(fp, "\n\n"); 
 
 	if (nr_procs > 1) fixed_parallel_work(nr_procs, proc_id, arr_filling, fp);
-	else sequential(arr_filling, fp);
+	else {
+		sequential(arr_filling, fp);
+		fprintf(fp, "\n"); 
+	}
 
 	fclose(fp);
 	
