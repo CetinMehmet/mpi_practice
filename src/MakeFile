@@ -4,7 +4,7 @@ GCC_NO_COMMON_BLOCKS = NO
 
 all: ${EXECS}
 
-test:test.c
+test:test_mpi.c
 	${MPICC} -Wall -O3 -o test_mpi test_mpi.c -lm
 
 clean:
