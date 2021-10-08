@@ -126,8 +126,7 @@ void parallel_work(int nr_procs, int proc_id, char* work_type, FILE *fp) {
 	for (int i = 0; i < job_per_proc; i++) {
 		int result = test(sub_arr[i]);
 		if (result) local_nr_true++;
-		MPI_Reduce(&local_nr_true, &global_nr_true, 1, MPI_INT, MPI_SUM, ROOT, MPI_COMM_WORLD);
-		// MPI_Barrier(MPI_COMM_WORLD); // All procs do same amount of work, thus implementing a barrier won't reduce performance that much
+		MPI_Allreduce(&local_nr_true, &global_nr_true, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
 		if (global_nr_true >= 100) break;
 	}
 	
@@ -165,6 +164,8 @@ int main(int argc, char *argv[]) {
 	}
 
 	fclose(fp);
+	
+	MPI_Barrier(MPI_COMM_WORLD);
 	MPI_Finalize(); 
 	
 	return 0;
