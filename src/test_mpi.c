@@ -95,7 +95,7 @@ void sequential(char *work_type, FILE *fp) {
 }
 
 
-void do_job(int job_per_proc, int *sub_arr, int proc_id) {
+void do_job(int job_per_proc, int *sub_arr) {
 	int nr_true = 0;
 	for (int i = 0; i < job_per_proc; i++) {
 		// Check if there is a message from another process to update the nr_trues.
@@ -106,9 +106,7 @@ void do_job(int job_per_proc, int *sub_arr, int proc_id) {
 		while (flag) {
 			int total_nr_true = 0;
 			MPI_Recv(&total_nr_true, 1, MPI_INT, ROOT, TAG_NR_TRUES, MPI_COMM_WORLD, MPI_STATUS_IGNORE); // blocking recv parameter
-			if (total_nr_true >= 100) { // If we always recieve a message and can't get out of this loop, we return ASAP
-				return;
-			}
+			if (total_nr_true >= 100) return;
 			MPI_Iprobe(MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD, &flag, &status); // check for more updates
 		}
 		int result = test(sub_arr[i]);
@@ -117,7 +115,6 @@ void do_job(int job_per_proc, int *sub_arr, int proc_id) {
 			MPI_Send(&nr_true, 1, MPI_INT, ROOT, TAG_NR_TRUES, MPI_COMM_WORLD);  
 		}
 	}
-	printf("Came to end of loop %d\n", proc_id);
 }
 
 
@@ -145,8 +142,8 @@ void parallel_work(int nr_procs, int proc_id, char* work_type, FILE *fp) {
 	// Scatter the random numbers from the root process to all processes in the MPI world
   	MPI_Scatter(arr, job_per_proc, MPI_INT, sub_arr, job_per_proc, MPI_INT, ROOT, MPI_COMM_WORLD);
 
-	if (proc_id == ROOT) { 			
-		double time_root = -MPI_Wtime(); // This command helps us measure time. 
+	double time = -MPI_Wtime(); // This command helps us measure time. 
+	if (proc_id == ROOT) { 					
 		int total_nr_true = 0; 
 		int i = 0;
 		while (total_nr_true < 100 && i < job_per_proc) {
@@ -175,17 +172,12 @@ void parallel_work(int nr_procs, int proc_id, char* work_type, FILE *fp) {
 				MPI_Iprobe(MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD, &flag, &status); // check for more updates
 			}
 		}
-		time_root += MPI_Wtime(); // This command helps us measure time. 
-		fprintf(fp, "Process %d finished the job in %f seconds\n", proc_id, time_root); 
-		return;
 	}
 	else { 
-		double time = -MPI_Wtime(); // This command helps us measure time. 
-		do_job(job_per_proc, sub_arr, proc_id);
-		time += MPI_Wtime();
-		fprintf(fp, "Process %d finished the job in %f seconds\n", proc_id, time);
-		return;
+		do_job(job_per_proc, sub_arr);
 	}
+	time += MPI_Wtime();
+	fprintf(fp, "Process %d finished the job in %f seconds\n", proc_id, time);
 }
 
 
