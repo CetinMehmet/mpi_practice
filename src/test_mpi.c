@@ -103,7 +103,6 @@ void sequential(char *fill_type, char *work_type, FILE *fp) {
 // Used for imbalanced test.
 void do_job(int job_per_proc, int *sub_arr) {
 	int nr_true = 0;
-	int halt_job = 0;
 	for (int i = 0; i < job_per_proc; i++) {
 
 		// ** Implicit recieving: check if number of trues exceeds 100 in total.
@@ -111,6 +110,7 @@ void do_job(int job_per_proc, int *sub_arr) {
 		MPI_Status status;
 		MPI_Iprobe(ROOT, TAG_HALT_JOB, MPI_COMM_WORLD, &flag, &status); 
 		while (flag) {
+			int halt_job = 0;
 			MPI_Recv(&halt_job, 1, MPI_INT, ROOT, TAG_HALT_JOB, MPI_COMM_WORLD, MPI_STATUS_IGNORE); // blocking recv parameter
 			if (halt_job) return;
 			MPI_Iprobe(ROOT, TAG_HALT_JOB, MPI_COMM_WORLD, &flag, &status); // check for more updates
@@ -129,10 +129,10 @@ void do_job(int job_per_proc, int *sub_arr) {
 
 /* test_imbalanced is tested with multiple processors */
 void imbalanced_parallel_work(int nr_procs, int proc_id, char* work_type, FILE *fp) {
+	printf("Imbalanced job started in process %d\n", proc_id);
 	int job_per_proc = (N / (nr_procs));
 	int *sub_arr = allocate_mem(job_per_proc);
 	int *arr = NULL; 
-	int halt_job = 1;
 
 	if (proc_id == ROOT) { 			// Root machine distributes work
 		arr = allocate_mem(N);
@@ -147,11 +147,13 @@ void imbalanced_parallel_work(int nr_procs, int proc_id, char* work_type, FILE *
 	// Scatter the random numbers from the root process to all processes in the MPI world
   	MPI_Scatter(arr, job_per_proc, MPI_INT, sub_arr, job_per_proc, MPI_INT, ROOT, MPI_COMM_WORLD);
 
-	double time = -MPI_Wtime(); // This command helps us measure time. 
-	if (proc_id == ROOT) { 					
+	
+	if (proc_id == ROOT) { 		
+		double time = -MPI_Wtime(); // This command helps us measure time. 			
 		int total_nr_true = 0; 
-		int i = 0;
+		int i = 0; 
 		while (total_nr_true < 100 && i < job_per_proc) {
+			printf("total nr trues: %d\n", total_nr_true);
 			// Computation that the root process does
 			int result = test_imbalanced(sub_arr[i]); i++;
 			if (result) {
@@ -173,6 +175,7 @@ void imbalanced_parallel_work(int nr_procs, int proc_id, char* work_type, FILE *
 				MPI_Recv(&other_true, 1, MPI_INT, MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD, MPI_STATUS_IGNORE); 
 				total_nr_true++;
 				if (total_nr_true >= 100) { // If we always recieve a message and can't get out of this loop, we return ASAP
+					int halt_job = 1;	
 					for (int id = 1; id < nr_procs; id++) {
 						MPI_Send(&halt_job, 1, MPI_INT, id, TAG_HALT_JOB, MPI_COMM_WORLD);
 					}
@@ -181,12 +184,16 @@ void imbalanced_parallel_work(int nr_procs, int proc_id, char* work_type, FILE *
 				MPI_Iprobe(MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD, &flag, &status); // check for more updates
 			}
 		}
+		time += MPI_Wtime();
+		fprintf(fp, "Process %d finished the job in %f seconds\n", proc_id, time);
 	}
 	else { 
+		double time = -MPI_Wtime(); // This command helps us measure time. 
 		do_job(job_per_proc, sub_arr);
+		time += MPI_Wtime();
+		fprintf(fp, "Process %d finished the job in %f seconds\n", proc_id, time);
 	}
-	time += MPI_Wtime();
-	fprintf(fp, "Process %d finished the job in %f seconds\n", proc_id, time);
+	return;
 }
 
 
