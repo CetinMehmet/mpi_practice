@@ -86,7 +86,7 @@ void sequential(char *fill_type, char *work_type, FILE *fp) {
 	int result = 0;
 	double time = -MPI_Wtime(); // This command helps us measure time. 
 	for (int i = 0; i < N; i++) {
-		if (work_type == "imbalanced") result = test(arr[i]);
+		if (strcmp(work_type, "imbalanced") == 0) result = test(arr[i]);
 		else result = test_imbalanced(arr[i]);
 
 		if (result) {
@@ -255,7 +255,7 @@ int main(int argc, char *argv[]) {
 		fp = fopen(file_name, "w+"); 
 	}
 
-	if (work_type == "fixed") {
+	if (strcmp(work_type, "fixed") == 0) {
 		if (nr_procs > 1) {
 			double time = fixed_parallel_work(nr_procs, proc_id, arr_filling, fp);
 			if (proc_id == ROOT) fprintf(fp, "Time took to complete %s work with %d processors: %f\n", arr_filling, nr_procs, time);
@@ -265,7 +265,7 @@ int main(int argc, char *argv[]) {
 			fprintf(fp, "\n"); 
 		}
 	} 
-	else if (work_type == "imbalanced") {
+	else if (strcmp(work_type, "imbalanced") == 0) {
 		if (nr_procs > 1) {
 			imbalanced_parallel_work(nr_procs, proc_id, arr_filling, fp);
 			// if (proc_id == ROOT) fprintf(fp, "Time took to complete %s work with %d processors: %f\n", arr_filling, nr_procs, time);
