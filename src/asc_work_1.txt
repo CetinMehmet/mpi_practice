@@ -1,0 +1,12 @@
+Time spent for the sequential version: 441.882478
+
+Time spent for the sequential version: 442.658783
+
+Time spent for the sequential version: 442.388012
+
+Time spent for the sequential version: 440.955392
+
+Time spent for the sequential version: 442.525456
+
+Time spent for the sequential version: 443.059101
+

@@ -1,0 +1,5 @@
+Time took to complete asc work with 2 processors: 173.838116
+Time took to complete asc work with 2 processors: 174.729444
+Time took to complete asc work with 2 processors: 173.360359
+Time took to complete asc work with 2 processors: 173.623496
+Time took to complete asc work with 2 processors: 174.207076

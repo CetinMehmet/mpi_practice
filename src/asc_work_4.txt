@@ -1,0 +1,5 @@
+Time took to complete asc work with 4 processors: 93.242482
+Time took to complete asc work with 4 processors: 92.646375
+Time took to complete asc work with 4 processors: 92.753091
+Time took to complete asc work with 4 processors: 92.711299
+Time took to complete asc work with 4 processors: 92.870062

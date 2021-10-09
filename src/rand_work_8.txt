@@ -1,0 +1,6 @@
+Time took to complete rand work with 8 processors: 62.398999
+Time took to complete rand work with 8 processors: 55.966773
+Time took to complete rand work with 8 processors: 60.606145
+Time took to complete rand work with 8 processors: 67.193671
+Time took to complete rand work with 8 processors: 61.126687
+Time took to complete rand work with 8 processors: 55.179363
