@@ -152,8 +152,9 @@ void imbalanced_parallel_work(int nr_procs, int proc_id, char* work_type, FILE *
 		double time = -MPI_Wtime(); // This command helps us measure time. 			
 		int total_nr_true = 0; 
 		int i = 0; 
+		int halt_job = 1;	
 		while (total_nr_true < 100 && i < job_per_proc) {
-			printf("total nr trues: %d\n", total_nr_true);
+			printf("i: %d\n", i);
 			// Computation that the root process does
 			int result = test_imbalanced(sub_arr[i]); i++;
 			if (result) {
@@ -173,9 +174,9 @@ void imbalanced_parallel_work(int nr_procs, int proc_id, char* work_type, FILE *
 			while (flag) {
 				int other_true = 0;
 				MPI_Recv(&other_true, 1, MPI_INT, MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD, MPI_STATUS_IGNORE); 
+				printf("A true recved from process\n");
 				total_nr_true++;
 				if (total_nr_true >= 100) { // If we always recieve a message and can't get out of this loop, we return ASAP
-					int halt_job = 1;	
 					for (int id = 1; id < nr_procs; id++) {
 						MPI_Send(&halt_job, 1, MPI_INT, id, TAG_HALT_JOB, MPI_COMM_WORLD);
 					}
