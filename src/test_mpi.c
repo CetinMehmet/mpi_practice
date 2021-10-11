@@ -104,7 +104,6 @@ void sequential(char *fill_type, char *work_type, FILE *fp) {
 void imbalanced_parallel_work(int nr_procs, int proc_id, char* work_type, FILE *fp) {
 	printf("Imbalanced job started in process %d\n", proc_id);
 	int job_per_proc = (N / (nr_procs));
-	int *sub_arr = allocate_mem(job_per_proc);
 	int *arr = NULL; 
 	int total_nr_true = 0;
 
@@ -145,7 +144,8 @@ void imbalanced_parallel_work(int nr_procs, int proc_id, char* work_type, FILE *
 				MPI_Iprobe(MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD, &flag, &status); 
 			}
 		}
-		double time += MPI_Wtime();
+		time += MPI_Wtime();
+		fprintf(fp, "Root process spent %f seconds to complete imbalanced test.\n", time);
 	}
 	
 	else {
