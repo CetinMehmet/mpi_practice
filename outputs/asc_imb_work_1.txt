@@ -1,0 +1,10 @@
+Time took to complete asc imbalanced work for sequential program: 353.243413
+
+Time took to complete asc imbalanced work for sequential program: 354.631084
+
+Time took to complete asc imbalanced work for sequential program: 352.907344
+
+Time took to complete asc imbalanced work for sequential program: 352.924858
+
+Time took to complete asc imbalanced work for sequential program: 353.599148
+

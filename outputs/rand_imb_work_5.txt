@@ -1,0 +1,5 @@
+Time took to complete rand imbalanced work with 4 processors: 90.470045
+Time took to complete rand imbalanced work with 4 processors: 98.874450
+Time took to complete rand imbalanced work with 4 processors: 84.321787
+Time took to complete rand imbalanced work with 4 processors: 87.401896
+Time took to complete rand imbalanced work with 4 processors: 92.266953

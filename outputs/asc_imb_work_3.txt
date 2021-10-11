@@ -1,0 +1,5 @@
+Time took to complete asc imbalanced work with 2 processors: 180.924918
+Time took to complete asc imbalanced work with 2 processors: 181.696644
+Time took to complete asc imbalanced work with 2 processors: 183.289832
+Time took to complete asc imbalanced work with 2 processors: 181.390746
+Time took to complete asc imbalanced work with 2 processors: 182.650581
