@@ -130,7 +130,6 @@ void imbalanced_parallel_work(int nr_procs, int proc_id, char* work_type, FILE *
 				int is_true = 0;
 				MPI_Recv(&is_true, 1, MPI_INT, MPI_ANY_SOURCE, TAG_JOB_DONE, MPI_COMM_WORLD, &status); 
 				if (is_true) {
-					printf("total nr trues: %d\n", total_nr_true);
 					total_nr_true++;
 				} 
 				if (total_nr_true >= 100) {
@@ -153,6 +152,7 @@ void imbalanced_parallel_work(int nr_procs, int proc_id, char* work_type, FILE *
 	}
 	
 	else {
+		double time = -MPI_Wtime();
 		int halt_proc = 0;
 		while (halt_proc == 0) {
 			int flag = 0, job = 0;
@@ -173,6 +173,8 @@ void imbalanced_parallel_work(int nr_procs, int proc_id, char* work_type, FILE *
 			MPI_Iprobe(ROOT, TAG_HALT_PROC, MPI_COMM_WORLD, &flag, MPI_STATUS_IGNORE); 
 			if (flag) MPI_Recv(&halt_proc, 1, MPI_INT, ROOT, TAG_HALT_PROC, MPI_COMM_WORLD, MPI_STATUS_IGNORE); 
 		}
+		time += MPI_Wtime();
+		fprintf(fp, "Process %d spent %f seconds to complete imbalanced test.\n", proc_id, time);
 	}
 
 	return;
