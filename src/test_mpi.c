@@ -86,8 +86,8 @@ void sequential(char *fill_type, char *work_type, FILE *fp) {
 	int result = 0;
 	double time = -MPI_Wtime(); // This command helps us measure time. 
 	for (int i = 0; i < N; i++) {
-		if (strcmp(work_type, "imbalanced") == 0) result = test(arr[i]);
-		else result = test_imbalanced(arr[i]);
+		if (strcmp(work_type, "imbalanced") == 0) result = test_imbalanced(arr[i]);
+		else result = test(arr[i]);
 
 		if (result) {
 			nr_true++;
@@ -116,8 +116,8 @@ void imbalanced_parallel_work(int nr_procs, int proc_id, char* work_type, FILE *
 		}
 
 		// Initially send jobs to all worker procs
-		int idx = 1; 
-		for (idx = 1; idx < nr_procs; idx++) MPI_Send(&arr[idx], 1, MPI_INT, idx, TAG_NEW_JOB, MPI_COMM_WORLD);
+		int idx = 0; 
+		for (idx = 0; idx < nr_procs-1; idx++) MPI_Send(&arr[idx], 1, MPI_INT, idx+1, TAG_NEW_JOB, MPI_COMM_WORLD);
 
 		double time = -MPI_Wtime();
 		int total_nr_true = 0;
