@@ -116,11 +116,11 @@ void imbalanced_parallel_work(int nr_procs, int proc_id, char* work_type, FILE *
 			fprintf(stderr, "Wrong filling for the array.\n"); exit(1);
 		}
 
+		int idx = 1; 
 		// Initially send jobs to all worker procs
-		for (int i = 1; i < nr_procs; i++) MPI_Send(&arr[i], 1, MPI_INT, i, TAG_NEW_JOB, MPI_COMM_WORLD);
+		for (idx = 1; idx < nr_procs; idx++) MPI_Send(&arr[idx], 1, MPI_INT, i, TAG_NEW_JOB, MPI_COMM_WORLD);
 
 		double time = -MPI_Wtime();
-		int i = 0;
 		while (total_nr_true <= 100) {
 
 			int flag = 0;
@@ -129,7 +129,10 @@ void imbalanced_parallel_work(int nr_procs, int proc_id, char* work_type, FILE *
 			while (flag) {
 				int is_true = 0;
 				MPI_Recv(&is_true, 1, MPI_INT, MPI_ANY_SOURCE, TAG_JOB_DONE, MPI_COMM_WORLD, &status); 
-				if (is_true) total_nr_true++; 
+				if (is_true) {
+					printf("total nr trues: %d\n", total_nr_true);
+					total_nr_true++;
+				} 
 				if (total_nr_true >= 100) {
 					int halt_proc = 1;
 					for (int i = 1; i < nr_procs; i++) {
@@ -137,8 +140,9 @@ void imbalanced_parallel_work(int nr_procs, int proc_id, char* work_type, FILE *
 					}
 				}
 
-				// Send a job to the process that completed the job
-				MPI_Send(&arr[i], 1, MPI_INT, status.MPI_SOURCE, TAG_NEW_JOB, MPI_COMM_WORLD);
+				// Send a job to the process that completed the job and advance arr index
+				MPI_Send(&arr[idx], 1, MPI_INT, status.MPI_SOURCE, TAG_NEW_JOB, MPI_COMM_WORLD);
+				idx++; 
 
 				// Check for more updates
 				MPI_Iprobe(MPI_ANY_SOURCE, TAG_JOB_DONE, MPI_COMM_WORLD, &flag, &status); 
