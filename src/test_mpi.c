@@ -106,7 +106,7 @@ double sequential(char *fill_type, char *work_type, FILE *fp) {
 double imbalanced_parallel_work(int nr_procs, int proc_id, char* fill_type, FILE *fp) {
 	printf("Imbalanced job started in process %d\n", proc_id);
 	int *arr = NULL; 
-	double time;
+	double time = 0.0;
 
 	if (proc_id == ROOT) { 			
 		arr = allocate_mem(N);
@@ -245,7 +245,6 @@ int main(int argc, char *argv[]) {
 		else {
 			double time = sequential(arr_filling, work_type, fp);
 			fprintf(fp, "Time took to complete %s %s work for sequential program: %f\n", arr_filling, work_type, time);
-			fprintf(fp, "\n"); 
 		}
 	} 
 	else if (strcmp(work_type, "imbalanced") == 0) {
