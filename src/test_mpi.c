@@ -118,7 +118,7 @@ void imbalanced_parallel_work(int nr_procs, int proc_id, char* work_type, FILE *
 
 		int idx = 1; 
 		// Initially send jobs to all worker procs
-		for (idx = 1; idx < nr_procs; idx++) MPI_Send(&arr[idx], 1, MPI_INT, i, TAG_NEW_JOB, MPI_COMM_WORLD);
+		for (idx = 1; idx < nr_procs; idx++) MPI_Send(&arr[idx], 1, MPI_INT, idx, TAG_NEW_JOB, MPI_COMM_WORLD);
 
 		double time = -MPI_Wtime();
 		while (total_nr_true <= 100) {
