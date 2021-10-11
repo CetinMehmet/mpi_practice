@@ -103,7 +103,6 @@ void sequential(char *fill_type, char *work_type, FILE *fp) {
 /* 1 master and n-1 worker nodes */ 
 void imbalanced_parallel_work(int nr_procs, int proc_id, char* work_type, FILE *fp) {
 	printf("Imbalanced job started in process %d\n", proc_id);
-	int job_per_proc = (N / (nr_procs));
 	int *arr = NULL; 
 	int total_nr_true = 0;
 
@@ -132,8 +131,9 @@ void imbalanced_parallel_work(int nr_procs, int proc_id, char* work_type, FILE *
 				MPI_Recv(&is_true, 1, MPI_INT, MPI_ANY_SOURCE, TAG_JOB_DONE, MPI_COMM_WORLD, &status); 
 				if (is_true) total_nr_true++; 
 				if (total_nr_true >= 100) {
+					int halt_proc = 1;
 					for (int i = 1; i < nr_procs; i++) {
-						MPI_Send(&halt_proc, 1, MPI_INT, i, TAG_HALT_PROC, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+						MPI_Send(&halt_proc, 1, MPI_INT, i, TAG_HALT_PROC, MPI_COMM_WORLD);
 					}
 				}
 
@@ -141,7 +141,7 @@ void imbalanced_parallel_work(int nr_procs, int proc_id, char* work_type, FILE *
 				MPI_Send(&arr[i], 1, MPI_INT, status.MPI_SOURCE, TAG_NEW_JOB, MPI_COMM_WORLD);
 
 				// Check for more updates
-				MPI_Iprobe(MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD, &flag, &status); 
+				MPI_Iprobe(MPI_ANY_SOURCE, TAG_JOB_DONE, MPI_COMM_WORLD, &flag, &status); 
 			}
 		}
 		time += MPI_Wtime();
