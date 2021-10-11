@@ -72,7 +72,7 @@ void fill_ascending(int *A, int N) {
 }
 
 /* Work done by 1 processor */
-void sequential(char *fill_type, char *work_type, FILE *fp) {
+double sequential(char *fill_type, char *work_type, FILE *fp) {
 	int *arr = allocate_mem(N);
 	if (strcmp(fill_type, "asc") == 0) {
 		fill_ascending(arr, N); 	
@@ -82,14 +82,10 @@ void sequential(char *fill_type, char *work_type, FILE *fp) {
 		printf("Wrong filling for the array.\n"); exit(1);
 	}
 	
-	int nr_true = 0;
-	int result = 0;
+	int nr_true = 0, result = 0;;
 	double time = -MPI_Wtime(); // This command helps us measure time. 
 	for (int i = 0; i < N; i++) {
-		if (strcmp(work_type, "imbalanced") == 0) {
-			printf("Imbalanced test\n");
-			result = test_imbalanced(arr[i]);
-		} 
+		if (strcmp(work_type, "imbalanced") == 0) result = test_imbalanced(arr[i]);
 		else result = test(arr[i]);
 
 		if (result) {
@@ -99,24 +95,20 @@ void sequential(char *fill_type, char *work_type, FILE *fp) {
 	}
 
   	time += MPI_Wtime();
-  	fprintf(fp, "Time spent for the sequential version: %f\n", time);
+  	return time
 }
 
 
 /* 1 master and n-1 worker nodes */ 
-void imbalanced_parallel_work(int nr_procs, int proc_id, char* work_type, FILE *fp) {
+double imbalanced_parallel_work(int nr_procs, int proc_id, char* work_type, FILE *fp) {
 	printf("Imbalanced job started in process %d\n", proc_id);
 	int *arr = NULL; 
 
 	if (proc_id == ROOT) { 			
 		arr = allocate_mem(N);
-		if (strcmp(work_type, "asc") == 0) {
-			fill_ascending(arr, N); 	
-		} else if (strcmp(work_type, "rand") == 0) {
-			fill_random(arr, N);
-		} else {
-			fprintf(stderr, "Wrong filling for the array.\n"); exit(1);
-		}
+		if (strcmp(work_type, "asc") == 0) fill_ascending(arr, N); 	
+		else if (strcmp(work_type, "rand") == 0) fill_random(arr, N);
+		else fprintf(stderr, "Wrong filling for the array.\n"); exit(1);
 
 		// Initially send jobs to all worker procs
 		int idx = 0; 
@@ -134,14 +126,13 @@ void imbalanced_parallel_work(int nr_procs, int proc_id, char* work_type, FILE *
 				MPI_Recv(&is_true, 1, MPI_INT, MPI_ANY_SOURCE, TAG_JOB_DONE, MPI_COMM_WORLD, &status); 
 				if (is_true) {
 					total_nr_true++;
-				} 
-				if (total_nr_true >= 100) {
-					int halt_proc = 1;
-					for (int i = 1; i < nr_procs; i++) {
-						MPI_Send(&halt_proc, 1, MPI_INT, i, TAG_HALT_PROC, MPI_COMM_WORLD);
+					if (total_nr_true >= 100) {
+						int halt_proc = 1;
+						for (int i = 1; i < nr_procs; i++) 
+							MPI_Send(&halt_proc, 1, MPI_INT, i, TAG_HALT_PROC, MPI_COMM_WORLD);	
 					}
 				}
-
+				
 				// Send a job to the process that completed the job and advance arr index
 				MPI_Send(&arr[idx], 1, MPI_INT, status.MPI_SOURCE, TAG_NEW_JOB, MPI_COMM_WORLD);
 				idx++; 
@@ -151,11 +142,9 @@ void imbalanced_parallel_work(int nr_procs, int proc_id, char* work_type, FILE *
 			}
 		}
 		time += MPI_Wtime();
-		fprintf(fp, "Root process spent %f seconds to complete imbalanced test.\n", time);
 	}
 	
 	else {
-		double time = -MPI_Wtime();
 		int halt_proc = 0;
 		while (halt_proc == 0) {
 			int flag = 0, job = 0;
@@ -176,36 +165,29 @@ void imbalanced_parallel_work(int nr_procs, int proc_id, char* work_type, FILE *
 			MPI_Iprobe(ROOT, TAG_HALT_PROC, MPI_COMM_WORLD, &flag, MPI_STATUS_IGNORE); 
 			if (flag) MPI_Recv(&halt_proc, 1, MPI_INT, ROOT, TAG_HALT_PROC, MPI_COMM_WORLD, MPI_STATUS_IGNORE); 
 		}
-		time += MPI_Wtime();
-		fprintf(fp, "Process %d spent %f seconds to complete imbalanced test.\n", proc_id, time);
 	}
-
-	return;
+	return time;
 }
 
 
-/* n worker nodes s*/
+/* n worker nodes */
 double fixed_parallel_work(int nr_procs, int proc_id, char* work_type, FILE *fp) {
-	int job_per_proc = (N / (nr_procs));
-	int *sub_arr = allocate_mem(job_per_proc);
 	int *arr = NULL; 
-	int global_nr_true = 0;
-	double global_time = 0;
-
-	if (proc_id == ROOT) { 			// Root machine distributes work
+	if (proc_id == ROOT) { 		
 		arr = allocate_mem(N);
-		if (strcmp(work_type, "asc") == 0) {
-			fill_ascending(arr, N); 	
-		} else if (strcmp(work_type, "rand") == 0) {
-			fill_random(arr, N);
-		} else {
-			fprintf(stderr, "Wrong filling for the array.\n"); exit(1);
-		}
+		if (strcmp(work_type, "asc") == 0) fill_ascending(arr, N); 	
+		else if (strcmp(work_type, "rand") == 0) fill_random(arr, N);
+		else fprintf(stderr, "Wrong filling for the array.\n"); exit(1);
 	}
+
 	// Scatter the random numbers from the root process to all processes in the MPI world
+	int *sub_arr = allocate_mem(job_per_proc);
+	int job_per_proc = (N / (nr_procs));
   	MPI_Scatter(arr, job_per_proc, MPI_INT, sub_arr, job_per_proc, MPI_INT, ROOT, MPI_COMM_WORLD);
 	
-	double time = -MPI_Wtime(); // This command helps us measure time. 
+	double global_time = 0;
+	int global_nr_true = 0; 
+	double time = -MPI_Wtime(); 
 	int local_nr_true = 0;
 	for (int i = 0; i < job_per_proc; i++) {
 		int result = test(sub_arr[i]);
@@ -245,20 +227,24 @@ int main(int argc, char *argv[]) {
 	if (strcmp(work_type, "fixed") == 0) {
 		if (nr_procs > 1) {
 			double time = fixed_parallel_work(nr_procs, proc_id, arr_filling, fp);
-			if (proc_id == ROOT) fprintf(fp, "Time took to complete %s work with %d processors: %f\n", arr_filling, nr_procs, time);
+			if (proc_id == ROOT) 
+				fprintf(fp, "Time took to complete %s fixed work with %d processors: %f\n", arr_filling, nr_procs, time);
 		} 
 		else {
-			sequential(arr_filling, work_type, fp);
+			double time = sequential(arr_filling, work_type, fp);
+			fprintf(fp, "Time took to complete %s %s work for sequential program: %f\n", arr_filling, work_type, time);
 			fprintf(fp, "\n"); 
 		}
 	} 
 	else if (strcmp(work_type, "imbalanced") == 0) {
 		if (nr_procs > 1) {
-			imbalanced_parallel_work(nr_procs, proc_id, arr_filling, fp);
-			// if (proc_id == ROOT) fprintf(fp, "Time took to complete %s work with %d processors: %f\n", arr_filling, nr_procs, time);
+			double time = imbalanced_parallel_work(nr_procs, proc_id, arr_filling, fp);
+			if (proc_id == ROOT) 
+				fprintf(fp, "Time took to complete %s imbalanced work with %d processors: %f\n", arr_filling, nr_procs-1, time);
 		} 
 		else {
-			sequential(arr_filling, work_type, fp);
+			double time = sequential(arr_filling, work_type, fp);
+			fprintf(fp, "Time took to complete %s %s work for sequential program: %f\n", arr_filling, work_type, time);
 			fprintf(fp, "\n"); 
 		}
 	}
