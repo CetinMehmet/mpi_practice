@@ -72,7 +72,7 @@ void fill_ascending(int *A, int N) {
 }
 
 /* Work done by 1 processor */
-double sequential(char *fill_type, char *fill_type, FILE *fp) {
+double sequential(char *fill_type, char *work_type, FILE *fp) {
 	int *arr = allocate_mem(N);
 	if (strcmp(fill_type, "asc") == 0) {
 		fill_ascending(arr, N); 	
