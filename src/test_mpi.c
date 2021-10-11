@@ -72,7 +72,7 @@ void fill_ascending(int *A, int N) {
 }
 
 /* Work done by 1 processor */
-double sequential(char *fill_type, char *work_type, FILE *fp) {
+double sequential(char *fill_type, char *fill_type, FILE *fp) {
 	int *arr = allocate_mem(N);
 	if (strcmp(fill_type, "asc") == 0) {
 		fill_ascending(arr, N); 	
@@ -98,12 +98,12 @@ double sequential(char *fill_type, char *work_type, FILE *fp) {
 	}
 
   	time += MPI_Wtime();
-  	return time
+  	return time;
 }
 
 
 /* 1 master and n-1 worker nodes */ 
-double imbalanced_parallel_work(int nr_procs, int proc_id, char* work_type, FILE *fp) {
+double imbalanced_parallel_work(int nr_procs, int proc_id, char* fill_type, FILE *fp) {
 	printf("Imbalanced job started in process %d\n", proc_id);
 	int *arr = NULL; 
 	double time;
@@ -179,7 +179,7 @@ double imbalanced_parallel_work(int nr_procs, int proc_id, char* work_type, FILE
 
 
 /* n worker nodes */
-double fixed_parallel_work(int nr_procs, int proc_id, char* work_type, FILE *fp) {
+double fixed_parallel_work(int nr_procs, int proc_id, char* fill_type, FILE *fp) {
 	int *arr = NULL; 
 	if (proc_id == ROOT) { 		
 		arr = allocate_mem(N);
