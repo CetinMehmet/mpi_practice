@@ -82,11 +82,14 @@ double sequential(char *fill_type, char *work_type, FILE *fp) {
 		printf("Wrong filling for the array.\n"); exit(1);
 	}
 	
-	int nr_true = 0, result = 0;;
+	int nr_true = 0, result = 0;
 	double time = -MPI_Wtime(); // This command helps us measure time. 
 	for (int i = 0; i < N; i++) {
-		if (strcmp(work_type, "imbalanced") == 0) result = test_imbalanced(arr[i]);
-		else result = test(arr[i]);
+		if (strcmp(work_type, "imbalanced") == 0) {
+			result = test_imbalanced(arr[i]);
+		} else {
+			result = test(arr[i]);
+		}
 
 		if (result) {
 			nr_true++;
@@ -103,6 +106,7 @@ double sequential(char *fill_type, char *work_type, FILE *fp) {
 double imbalanced_parallel_work(int nr_procs, int proc_id, char* work_type, FILE *fp) {
 	printf("Imbalanced job started in process %d\n", proc_id);
 	int *arr = NULL; 
+	double time;
 
 	if (proc_id == ROOT) { 			
 		arr = allocate_mem(N);
@@ -114,7 +118,7 @@ double imbalanced_parallel_work(int nr_procs, int proc_id, char* work_type, FILE
 		int idx = 0; 
 		for (idx = 0; idx < nr_procs-1; idx++) MPI_Send(&arr[idx], 1, MPI_INT, idx+1, TAG_NEW_JOB, MPI_COMM_WORLD);
 
-		double time = -MPI_Wtime();
+		time = -MPI_Wtime();
 		int total_nr_true = 0;
 		while (total_nr_true <= 100) {
 
@@ -181,8 +185,8 @@ double fixed_parallel_work(int nr_procs, int proc_id, char* work_type, FILE *fp)
 	}
 
 	// Scatter the random numbers from the root process to all processes in the MPI world
-	int *sub_arr = allocate_mem(job_per_proc);
 	int job_per_proc = (N / (nr_procs));
+	int *sub_arr = allocate_mem(job_per_proc);
   	MPI_Scatter(arr, job_per_proc, MPI_INT, sub_arr, job_per_proc, MPI_INT, ROOT, MPI_COMM_WORLD);
 	
 	double global_time = 0;
