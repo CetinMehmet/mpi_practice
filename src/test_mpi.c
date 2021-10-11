@@ -86,7 +86,10 @@ void sequential(char *fill_type, char *work_type, FILE *fp) {
 	int result = 0;
 	double time = -MPI_Wtime(); // This command helps us measure time. 
 	for (int i = 0; i < N; i++) {
-		if (strcmp(work_type, "imbalanced") == 0) result = test_imbalanced(arr[i]);
+		if (strcmp(work_type, "imbalanced") == 0) {
+			printf("Imbalanced test\n");
+			result = test_imbalanced(arr[i]);
+		} 
 		else result = test(arr[i]);
 
 		if (result) {
