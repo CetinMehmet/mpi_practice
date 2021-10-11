@@ -8,9 +8,9 @@
 
 
 #define ROOT 0
-#define TAG_ARR_DATA 0
-#define TAG_NR_TRUES 1
-#define TAG_HALT_JOB 2
+#define TAG_JOB_DONE 0
+#define TAG_NEW_JOB 1
+#define TAG_HALT_PROC 2
 
 int N = 500;
 int R = 100;
@@ -100,41 +100,15 @@ void sequential(char *fill_type, char *work_type, FILE *fp) {
 }
 
 
-// Used for imbalanced test.
-void do_job(int job_per_proc, int *sub_arr) {
-	int nr_true = 0;
-	for (int i = 0; i < job_per_proc; i++) {
-
-		// ** Implicit recieving: check if number of trues exceeds 100 in total.
-		int flag = 0;
-		MPI_Status status;
-		MPI_Iprobe(ROOT, TAG_HALT_JOB, MPI_COMM_WORLD, &flag, &status); 
-		while (flag) {
-			int halt_job = 0;
-			MPI_Recv(&halt_job, 1, MPI_INT, ROOT, TAG_HALT_JOB, MPI_COMM_WORLD, MPI_STATUS_IGNORE); // blocking recv parameter
-			if (halt_job) return;
-			MPI_Iprobe(ROOT, TAG_HALT_JOB, MPI_COMM_WORLD, &flag, &status); // check for more updates
-		}
-
-		int result = test_imbalanced(sub_arr[i]);
-		if (result) {
-			nr_true++;
-			int magic_number = 1;
-			MPI_Send(&magic_number, 1, MPI_INT, ROOT, TAG_NR_TRUES, MPI_COMM_WORLD);  
-			if (nr_true >= 100) return;
-		}
-	}
-}
-
-
-/* test_imbalanced is tested with multiple processors */
+/* 1 master and n-1 worker nodes */ 
 void imbalanced_parallel_work(int nr_procs, int proc_id, char* work_type, FILE *fp) {
 	printf("Imbalanced job started in process %d\n", proc_id);
 	int job_per_proc = (N / (nr_procs));
 	int *sub_arr = allocate_mem(job_per_proc);
 	int *arr = NULL; 
+	int total_nr_true = 0;
 
-	if (proc_id == ROOT) { 			// Root machine distributes work
+	if (proc_id == ROOT) { 			
 		arr = allocate_mem(N);
 		if (strcmp(work_type, "asc") == 0) {
 			fill_ascending(arr, N); 	
@@ -143,69 +117,65 @@ void imbalanced_parallel_work(int nr_procs, int proc_id, char* work_type, FILE *
 		} else {
 			fprintf(stderr, "Wrong filling for the array.\n"); exit(1);
 		}
-	}
-	// Scatter the random numbers from the root process to all processes in the MPI world
-  	MPI_Scatter(arr, job_per_proc, MPI_INT, sub_arr, job_per_proc, MPI_INT, ROOT, MPI_COMM_WORLD);
 
-	
-	if (proc_id == ROOT) { 		
-		double time = -MPI_Wtime(); // This command helps us measure time. 			
-		int total_nr_true = 0; 
-		int i = 0; 
-		int halt_job = 1;	
-		while (total_nr_true < 100 && i < job_per_proc) {
-			printf("i: %d\n", i);
-			// Computation that the root process does
-			int result = test_imbalanced(sub_arr[i]); i++;
-			if (result) {
-				total_nr_true++;
-				if (total_nr_true >= 100) {
-					for (int id = 1; id < nr_procs; id++) {
-						MPI_Send(&halt_job, 1, MPI_INT, id, TAG_HALT_JOB, MPI_COMM_WORLD);
-					}
-					break; // Break early to not recieve messages sent from other procs
-				}
-			}
-			// Check if there is a message from another process to update the nr_trues.
+		// Initially send jobs to all worker procs
+		for (int i = 1; i < nr_procs; i++) MPI_Send(&arr[i], 1, MPI_INT, i, TAG_NEW_JOB, MPI_COMM_WORLD);
+
+		double time = -MPI_Wtime();
+		int i = 0;
+		while (total_nr_true <= 100) {
+
 			int flag = 0;
 			MPI_Status status;
-			MPI_Iprobe(MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD, &flag, &status); // ** Implicit recieving, check for pending message, don't wait for it then it will increase the time
-			// Non-blocking recv
+			MPI_Iprobe(MPI_ANY_SOURCE, TAG_JOB_DONE, MPI_COMM_WORLD, &flag, &status); 
 			while (flag) {
-				int other_true = 0;
-				MPI_Recv(&other_true, 1, MPI_INT, MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD, MPI_STATUS_IGNORE); 
-				printf("A true recved from process\n");
-				total_nr_true++;
-				if (total_nr_true >= 100) { // If we always recieve a message and can't get out of this loop, we return ASAP
-					for (int id = 1; id < nr_procs; id++) {
-						MPI_Send(&halt_job, 1, MPI_INT, id, TAG_HALT_JOB, MPI_COMM_WORLD);
+				int is_true = 0;
+				MPI_Recv(&is_true, 1, MPI_INT, MPI_ANY_SOURCE, TAG_JOB_DONE, MPI_COMM_WORLD, &status); 
+				if (is_true) total_nr_true++; 
+				if (total_nr_true >= 100) {
+					for (int i = 1; i < nr_procs; i++) {
+						MPI_Send(&halt_proc, 1, MPI_INT, i, TAG_HALT_PROC, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 					}
-					break; // Break early to not recieve messages sent from other procs
 				}
-				MPI_Iprobe(MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD, &flag, &status); // check for more updates
+
+				// Send a job to the process that completed the job
+				MPI_Send(&arr[i], 1, MPI_INT, status.MPI_SOURCE, TAG_NEW_JOB, MPI_COMM_WORLD);
+
+				// Check for more updates
+				MPI_Iprobe(MPI_ANY_SOURCE, TAG_NR_TRUES, MPI_COMM_WORLD, &flag, &status); 
 			}
 		}
-		time += MPI_Wtime();
-		fprintf(fp, "Process %d finished the job in %f seconds\n", proc_id, time);
+		double time += MPI_Wtime();
 	}
-	else { 
-		double time = -MPI_Wtime(); // This command helps us measure time. 
-		do_job(job_per_proc, sub_arr);
-		time += MPI_Wtime();
-		fprintf(fp, "Process %d finished the job in %f seconds\n", proc_id, time);
+	
+	else {
+		int halt_proc = 0;
+		while (halt_proc == 0) {
+			int flag = 0, job = 0;
+			MPI_Status status;
+			MPI_Iprobe(ROOT, TAG_NEW_JOB, MPI_COMM_WORLD, &flag, &status); 
+			while (flag) {
+				MPI_Recv(&job, 1, MPI_INT, ROOT, TAG_NEW_JOB, MPI_COMM_WORLD, &status); 
+				
+				// Do job and request for a new job, and also send the result
+				int is_true = test_imbalanced(job);
+				MPI_Send(&is_true, 1, MPI_INT, ROOT, TAG_NEW_JOB, MPI_COMM_WORLD); 
+				
+				// Check for more updates
+				MPI_Iprobe(ROOT, TAG_NEW_JOB, MPI_COMM_WORLD, &flag, &status); 
+			}
+
+			// Check if we need to update halt_proc 
+			MPI_Iprobe(ROOT, TAG_HALT_PROC, MPI_COMM_WORLD, &flag, MPI_STATUS_IGNORE); 
+			if (flag) MPI_Recv(&halt_proc, 1, MPI_INT, ROOT, TAG_HALT_PROC, MPI_COMM_WORLD, MPI_STATUS_IGNORE); 
+		}
 	}
+
 	return;
 }
 
 
-
-
-/*
-	- To reduce the communication overhead, we will reserve (N / nr_procs) job per processor
-	- Make sure that the program keeps track of how many successful elements (number of trues) all processes have found together, 
-	so that all processes can terminate as fast as possible (When nr_trues >= 100). 
-	- Root machine uses async non-blocking send 
-*/
+/* n worker nodes s*/
 double fixed_parallel_work(int nr_procs, int proc_id, char* work_type, FILE *fp) {
 	int job_per_proc = (N / (nr_procs));
 	int *sub_arr = allocate_mem(job_per_proc);
@@ -283,7 +253,6 @@ int main(int argc, char *argv[]) {
 			fprintf(fp, "\n"); 
 		}
 	}
-	
 
 	fclose(fp);
 	
