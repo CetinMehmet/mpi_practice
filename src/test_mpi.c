@@ -110,9 +110,13 @@ double imbalanced_parallel_work(int nr_procs, int proc_id, char* work_type, FILE
 
 	if (proc_id == ROOT) { 			
 		arr = allocate_mem(N);
-		if (strcmp(work_type, "asc") == 0) fill_ascending(arr, N); 	
-		else if (strcmp(work_type, "rand") == 0) fill_random(arr, N);
-		else fprintf(stderr, "Wrong filling for the array.\n"); exit(1);
+		if (strcmp(fill_type, "asc") == 0) {
+		fill_ascending(arr, N); 	
+		} else if (strcmp(fill_type, "rand") == 0) {
+			fill_random(arr, N);
+		} else {
+			printf("Wrong filling for the array.\n"); exit(1);
+		}
 
 		// Initially send jobs to all worker procs
 		int idx = 0; 
@@ -179,9 +183,13 @@ double fixed_parallel_work(int nr_procs, int proc_id, char* work_type, FILE *fp)
 	int *arr = NULL; 
 	if (proc_id == ROOT) { 		
 		arr = allocate_mem(N);
-		if (strcmp(work_type, "asc") == 0) fill_ascending(arr, N); 	
-		else if (strcmp(work_type, "rand") == 0) fill_random(arr, N);
-		else fprintf(stderr, "Wrong filling for the array.\n"); exit(1);
+		if (strcmp(fill_type, "asc") == 0) {
+			fill_ascending(arr, N); 	
+		} else if (strcmp(fill_type, "rand") == 0) {
+			fill_random(arr, N);
+		} else {
+			printf("Wrong filling for the array.\n"); exit(1);
+		}
 	}
 
 	// Scatter the random numbers from the root process to all processes in the MPI world
