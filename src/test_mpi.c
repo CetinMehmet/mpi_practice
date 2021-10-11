@@ -104,7 +104,6 @@ void sequential(char *fill_type, char *work_type, FILE *fp) {
 void imbalanced_parallel_work(int nr_procs, int proc_id, char* work_type, FILE *fp) {
 	printf("Imbalanced job started in process %d\n", proc_id);
 	int *arr = NULL; 
-	int total_nr_true = 0;
 
 	if (proc_id == ROOT) { 			
 		arr = allocate_mem(N);
@@ -116,11 +115,12 @@ void imbalanced_parallel_work(int nr_procs, int proc_id, char* work_type, FILE *
 			fprintf(stderr, "Wrong filling for the array.\n"); exit(1);
 		}
 
-		int idx = 1; 
 		// Initially send jobs to all worker procs
+		int idx = 1; 
 		for (idx = 1; idx < nr_procs; idx++) MPI_Send(&arr[idx], 1, MPI_INT, idx, TAG_NEW_JOB, MPI_COMM_WORLD);
 
 		double time = -MPI_Wtime();
+		int total_nr_true = 0;
 		while (total_nr_true <= 100) {
 
 			int flag = 0;
@@ -163,7 +163,7 @@ void imbalanced_parallel_work(int nr_procs, int proc_id, char* work_type, FILE *
 				
 				// Do job and request for a new job, and also send the result
 				int is_true = test_imbalanced(job);
-				MPI_Send(&is_true, 1, MPI_INT, ROOT, TAG_NEW_JOB, MPI_COMM_WORLD); 
+				MPI_Send(&is_true, 1, MPI_INT, ROOT, TAG_JOB_DONE, MPI_COMM_WORLD); 
 				
 				// Check for more updates
 				MPI_Iprobe(ROOT, TAG_NEW_JOB, MPI_COMM_WORLD, &flag, &status); 
