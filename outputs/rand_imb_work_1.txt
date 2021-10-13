@@ -1,10 +1,5 @@
 Time took to complete rand imbalanced work for sequential program: 319.347539
-
 Time took to complete rand imbalanced work for sequential program: 364.091595
-
 Time took to complete rand imbalanced work for sequential program: 366.648124
-
 Time took to complete rand imbalanced work for sequential program: 355.397361
-
 Time took to complete rand imbalanced work for sequential program: 343.862522
-
