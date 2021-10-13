@@ -256,7 +256,6 @@ int main(int argc, char *argv[]) {
 		else {
 			double time = sequential(arr_filling, work_type, fp);
 			fprintf(fp, "Time took to complete %s %s work for sequential program: %f\n", arr_filling, work_type, time);
-			fprintf(fp, "\n"); 
 		}
 	}
 
