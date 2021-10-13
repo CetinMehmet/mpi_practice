@@ -1,14 +1,7 @@
-Time spent for the sequential version: 336.397007
-
-Time spent for the sequential version: 331.755282
-
-Time spent for the sequential version: 319.172637
-
-Time spent for the sequential version: 312.030069
-
-Time spent for the sequential version: 350.331757
-
-Time spent for the sequential version: 351.338688
-
-Time spent for the sequential version: 300.440691
-
+Time spent for the rand sequential version: 336.397007
+Time spent for the rand sequential version: 331.755282
+Time spent for the rand sequential version: 319.172637
+Time spent for the rand sequential version: 312.030069
+Time spent for the rand sequential version: 350.331757
+Time spent for the rand sequential version: 351.338688
+Time spent for the rand sequential version: 300.440691
